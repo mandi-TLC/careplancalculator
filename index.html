@@ -69,6 +69,11 @@
     body { background: #fff; padding: 0; }
     .no-print { display: none !important; }
     .card { border: none; padding: 0; margin-bottom: 20px; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    .print-page-break { page-break-before: always; break-before: page; }
   }
 </style>
 </head>
@@ -806,7 +811,7 @@
     html += '</tbody><tfoot><tr><td colspan="6">Core Plan Total</td><td class="num">' + plan.coreGrand.insuranceVisits + '</td><td class="num">' + plan.coreGrand.selfPayVisits + '</td><td class="num">' + money(plan.coreGrand.subtotal) + '</td><td class="num">' + (plan.coreGrand.insuranceSavings > 0 ? '−' + money(plan.coreGrand.insuranceSavings) : money(0)) + '</td><td class="num">' + (plan.coreGrand.selfPaySavings > 0 ? '−' + money(plan.coreGrand.selfPaySavings) : money(0)) + '</td><td class="num">' + money(plan.coreGrand.total) + '</td></tr></tfoot></table>';
 
     if (plan.boltMonths.length) {
-      html += '<h3>Bolt-on services (Decomp / Laser / Acupuncture / Add-On) — optional, shown separately</h3>';
+      html += '<h3 class="print-page-break">Bolt-on services (Decomp / Laser / Acupuncture / Add-On) — optional, shown separately</h3>';
       html += '<table><thead><tr><th>Month</th><th>Weeks</th><th class="num">Decomp</th><th class="num">Laser</th><th class="num">Acupuncture</th><th class="num">Add-On</th><th class="num">Ins. Visits</th><th class="num">Self-Pay Visits</th><th class="num">Subtotal</th><th class="num">Insurance Savings</th><th class="num">Self-Pay Savings</th><th class="num">Total Due</th><th class="num">Total Incl. Core</th></tr></thead><tbody>';
       plan.boltMonths.forEach(function(m) {
         html += '<tr><td>Month ' + m.monthIdx + '</td><td>Weeks ' + m.weekStart + '–' + m.weekEnd + '</td>' +
