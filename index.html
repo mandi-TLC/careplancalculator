@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Care Plan Financial Calculator</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #f7f7f5;
+    color: #1f1f1f;
+    margin: 0;
+    padding: 20px;
+    font-size: 14px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 10px; color: #333; }
+  h3 { font-size: 13px; margin: 16px 0 8px; color: #555; }
+  .sub { color: #666; margin: 0 0 20px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #fff; border: 1px solid #e0ded8; border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: #444; margin-bottom: 3px; }
+  input[type=text], input[type=number], input[type=date] {
+    width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 13.5px; margin-bottom: 10px;
+  }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .block { border: 1px solid #eee; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fcfbf9; }
+  .block-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .block-title strong { font-size: 12.5px; color:#555; }
+  .segment-row { border: 1px solid #eee; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
+  .segment-row-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size: 11.5px; color: #888; text-transform: uppercase; letter-spacing: .02em; }
+  button { cursor: pointer; border: 1px solid #b5601f; background: #c96a22; color: #fff; padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+  button.secondary { background: #fff; color: #444; border: 1px solid #ccc; }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  button.danger { background: #fff; color: #b3261e; border: 1px solid #e3a29d; }
+  .btn-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .checkbox-row { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .checkbox-row input { width: auto; margin: 0; }
+  .checkbox-row label { margin: 0; font-weight: 500; color: #333; }
+  .hint { color: #888; font-size: 11.5px; margin-top: -6px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+  th { background: #f0efe9; font-weight: 700; }
+  td.num, th.num { text-align: right; }
+  tfoot td { font-weight: 700; background: #faf8f3; }
+  .summary-strip { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat { background: #fff; border: 1px solid #e0ded8; border-radius: 8px; padding: 10px 16px; min-width: 130px; }
+  .stat .num-big { font-size: 19px; font-weight: 700; }
+  .stat .lbl { font-size: 11.5px; color: #777; text-transform: uppercase; letter-spacing: .03em; }
+  #output { margin-top: 10px; }
+  .patient-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .patient-header h2 { margin: 0; }
+  .empty-note { color: #999; font-style: italic; padding: 20px; text-align: center; }
+  .savings-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .savings-btn { background: #fff; color: #444; border: 1px solid #ccc; padding: 9px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; text-align: left; min-width: 118px; }
+  .savings-btn .pct { display:block; font-weight: 400; font-size: 11.5px; color: #888; margin-top:2px; }
+  .savings-btn.active { background: #2f6f4f; border-color: #2f6f4f; color: #fff; }
+  .savings-btn.active .pct { color: #d9ede2; }
+  .fee-fixed { font-size: 13px; padding: 6px 0; color: #333; }
+  .fee-fixed b { color: #111; }
+  .radio-row { display: flex; gap: 14px; margin-bottom: 8px; flex-wrap: wrap; }
+  .radio-row label { display:flex; align-items:center; gap:5px; font-weight:500; color:#333; margin-bottom:0; }
+  .radio-row input { width:auto; margin:0; }
+  .insurance-sub { border-top: 1px dashed #ddd; margin-top: 8px; padding-top: 8px; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+    .card { border: none; padding: 0; margin-bottom: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Care Plan Financial Calculator</h1>
+<p class="sub">Plug in the recommended care plan, insurance details, TX Phase, bolt-on services, and savings — get a 4-week-block financial plan ready to transcribe onto patient paperwork.</p>
+
+<div class="grid no-print">
+  <div>
+    <div class="card">
+      <h2>Patient</h2>
+      <div class="row">
+        <div><label>Patient name</label><input type="text" id="patientName" placeholder="Jane Doe"></div>
+        <div><label>Plan start date (optional)</label><input type="date" id="startDate"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Care plan phases</h2>
+      <div class="hint">Add a row per frequency phase. Each phase has its own re-exam interval (resets per phase) and its own x-ray indicator + area count. X-rays happen at the END of that phase, right before the next frequency starts — for your last phase, that's the anniversary x-ray. The last visit of your final phase always doubles as the anniversary exam (billed as a re-exam), and one final report visit — adjustment only — is auto-added right after it. Adjustment is always billed alongside any re-exam/x-ray day; these are never stand-alone visits.</div>
+      <div id="phaseRows"></div>
+      <div class="btn-bar"><button type="button" class="secondary small" id="addPhaseBtn">+ Add phase</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Insurance</h2>
+      <div class="checkbox-row"><input type="checkbox" id="hasInsurance"><label for="hasInsurance">Patient has insurance to bill (unchecked = straight cash fees throughout)</label></div>
+      <div class="row">
+        <div><label>Deductible remaining ($)</label><input type="number" id="deductibleRemaining" value="0" min="0" step="0.01"></div>
+        <div><label>Coinsurance (%) — patient's share</label><input type="number" id="coinsurancePct" value="0" min="0" max="100" step="0.1"></div>
+      </div>
+      <div class="row">
+        <div><label>Copay ($) — adjustments &amp; re-exams</label><input type="number" id="copayGeneral" value="0" min="0" step="0.01"></div>
+        <div><label>X-ray copay ($) — optional</label><input type="text" id="copayXray" placeholder="Same as above"></div>
+      </div>
+      <div class="row">
+        <div><label>Max insurance-covered visits (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
+      </div>
+      <div class="checkbox-row"><input type="checkbox" id="deductibleAppliesToCopay"><label for="deductibleAppliesToCopay">Deductible also applies before the copay (always applies before coinsurance)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="billFullIfZeroCore"><label for="billFullIfZeroCore">Bill full cash fee to patient when allowed amount is $0 (treat as not covered — unchecked means $0 allowed = patient owes $0)</label></div>
+      <div class="hint">Coinsurance % is what the PATIENT pays (insurance covers the rest). Deductible is one running balance shared across adjustments, re-exams, x-rays, TX Phase, and any insurance-billed bolt-ons. <strong>Priority alternates month by month: within each month, the core plan (adjustments/re-exams/x-rays/TX Phase) claims the deductible first, then that same month's bolt-ons draw on whatever's left, then the next month's core gets first crack at whatever remains, and so on.</strong> Once the visit cap is hit, adjustments, re-exams, AND x-rays all switch to self-pay together — insurance is treated as exhausted for the rest of the plan.</div>
+    </div>
+
+    <div class="card">
+      <h2>Core fees</h2>
+      <div class="hint">Cash fees are fixed office rates and can't be edited here. Insurance allowed amounts vary by payer — enter those per plan.</div>
+      <table>
+        <thead><tr><th>Visit type</th><th class="num">Cash fee</th><th class="num">Insurance allowed amt</th></tr></thead>
+        <tbody>
+          <tr><td>Adjustment</td><td class="num fee-fixed"><b>$60.00</b></td><td class="num"><input type="number" id="feeAdjAllowed" value="0" min="0" step="0.01" style="margin-bottom:0;"></td></tr>
+          <tr><td>Re-exam (also anniversary exam)</td><td class="num fee-fixed"><b>$50.00</b></td><td class="num"><input type="number" id="feeReExamAllowed" value="0" min="0" step="0.01" style="margin-bottom:0;"></td></tr>
+          <tr><td>X-ray (per area)</td><td class="num fee-fixed"><b>$30.00</b></td><td class="num"><input type="number" id="feeXrayAllowedPerArea" value="0" min="0" step="0.01" style="margin-bottom:0;"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>TX Phase (traction chair)</h2>
+      <div class="hint">$75 each. Billed in whichever 4-week month you assign — not tied to individual visits — so you can spread the 4 phases out however works for the patient's wallet, regardless of how fast they actually work through them.</div>
+      <div class="radio-row" id="txPhaseModeRow"></div>
+      <div id="txPhaseInsuranceSub"></div>
+      <table style="margin-top:8px;">
+        <thead><tr><th>Phase</th><th>Used?</th><th>Bill in month #</th></tr></thead>
+        <tbody id="txPhaseRows"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Bolt-on services</h2>
+      <div class="hint">For each service, set how many times a week it happens, which week it starts, and for how many weeks (leave blank to run through the end of the plan). Add a second frequency if the pace changes partway through. Occurrences land on the first N visits of each applicable week, from your care plan schedule.</div>
+      <div id="boltOnRows"></div>
+    </div>
+
+    <div class="card">
+      <h2>SAVINGS</h2>
+      <div class="hint">Click the plan that applies. Percentages are what the patient is responsible for (not the discount). Savings only apply to self-pay charges — never to anything insurance is covering.</div>
+      <div class="savings-grid" id="savingsGrid"></div>
+    </div>
+
+    <div class="card">
+      <h2>Actions</h2>
+      <div class="btn-bar">
+        <button type="button" id="newPatientBtn" class="secondary">New patient (reset everything)</button>
+        <button type="button" id="copyBtn" class="secondary">Copy plan as text</button>
+        <button type="button" id="printBtn" class="secondary">Print</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="output"></div>
+
+<script>
+(function() {
+  function $(id) { return document.getElementById(id); }
+
+  var CASH = { adjustment: 60, reexam: 50, xrayPerArea: 30, txPhase: 75 };
+
+  var BOLT_ON_CATALOG = [
+    { key: 'decomp', label: 'Decomp', cash: 60 },
+    { key: 'laser', label: 'Laser', cash: 60 },
+    { key: 'acupuncture', label: 'Acupuncture', cash: 60 },
+    { key: 'addon', label: 'Add-On', cash: 37.5 }
+  ];
+
+  var SAVINGS_OPTIONS = [
+    { key: 'none', label: 'None / Full Fee', responsibility: 100 },
+    { key: 'admin', label: 'Admin', responsibility: 80 },
+    { key: 'military', label: 'Military', responsibility: 70 },
+    { key: 'carecredit', label: 'Care Credit', responsibility: 95 },
+    { key: '2nd', label: '2nd Person', responsibility: 72 },
+    { key: '3rd', label: '3rd Person', responsibility: 65 },
+    { key: '4th', label: '4th Person', responsibility: 58 }
+  ];
+
+  function freshSegment() { return { timesPerWeek: 1, startWeek: 1, durationWeeks: null }; }
+
+  function freshBoltOns() {
+    return BOLT_ON_CATALOG.map(function(c) {
+      return {
+        key: c.key, label: c.label, cash: c.cash,
+        active: false, segments: [freshSegment()],
+        billingMode: 'selfpay',
+        allowedAmount: 0, copay: 0, coinsurancePct: 0, maxCoveredVisits: null, billFullIfZero: false, noExtraCharge: false
+      };
+    });
+  }
+
+  function freshTxPhase() {
+    return {
+      billingMode: 'selfpay',
+      allowedAmount: 0, copay: 0, coinsurancePct: 0, maxCoveredVisits: null, billFullIfZero: false, noExtraCharge: false,
+      phases: [
+        { num: 1, active: false, billMonth: 1 },
+        { num: 2, active: false, billMonth: 1 },
+        { num: 3, active: false, billMonth: 2 },
+        { num: 4, active: false, billMonth: 2 }
+      ]
+    };
+  }
+
+  var state = {
+    phases: [
+      { freq: 3, weeks: 4, reExamInterval: 9, xrayAtEnd: false, xrayAreas: 2 },
+      { freq: 2, weeks: 4, reExamInterval: 10, xrayAtEnd: true, xrayAreas: 2 }
+    ],
+    savingsKey: 'none',
+    boltOns: freshBoltOns(),
+    txPhase: freshTxPhase()
+  };
+
+  // ---- savings buttons ----
+  function renderSavings() {
+    var grid = $('savingsGrid');
+    grid.innerHTML = '';
+    SAVINGS_OPTIONS.forEach(function(opt) {
+      var discount = 100 - opt.responsibility;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'savings-btn' + (state.savingsKey === opt.key ? ' active' : '');
+      btn.innerHTML = opt.label + '<span class="pct">' + opt.responsibility + '% responsibility (' + discount + '% off)</span>';
+      btn.addEventListener('click', function() { state.savingsKey = opt.key; renderSavings(); recalc(); });
+      grid.appendChild(btn);
+    });
+  }
+  function currentDiscountPct() {
+    var opt = SAVINGS_OPTIONS.filter(function(o) { return o.key === state.savingsKey; })[0] || SAVINGS_OPTIONS[0];
+    return 100 - opt.responsibility;
+  }
+
+  // ---- phase rows ----
+  function renderPhases() {
+    var container = $('phaseRows');
+    container.innerHTML = '';
+    state.phases.forEach(function(phase, idx) {
+      var block = document.createElement('div');
+      block.className = 'block';
+      block.innerHTML =
+        '<div class="block-title"><strong>Phase ' + (idx + 1) + '</strong>' +
+          (state.phases.length > 1 ? '<button type="button" class="danger small" data-remove="' + idx + '">Remove</button>' : '') +
+        '</div>' +
+        '<div class="row">' +
+          '<div><label>Visits / week</label><input type="number" min="0" step="1" value="' + phase.freq + '" data-idx="' + idx + '" data-field="freq"></div>' +
+          '<div><label>Duration (weeks)</label><input type="number" min="0" step="1" value="' + phase.weeks + '" data-idx="' + idx + '" data-field="weeks"></div>' +
+          '<div><label>Re-exam every ___ visits (this phase)</label><input type="number" min="0" step="1" value="' + phase.reExamInterval + '" data-idx="' + idx + '" data-field="reExamInterval"></div>' +
+        '</div>' +
+        '<div class="row">' +
+          '<div class="checkbox-row" style="margin-top:6px;"><input type="checkbox" ' + (phase.xrayAtEnd ? 'checked' : '') + ' data-idx="' + idx + '" data-field="xrayAtEnd" id="xrayEnd' + idx + '"><label for="xrayEnd' + idx + '">X-ray at end of this phase</label></div>' +
+          '<div><label>Areas</label><input type="number" min="0" step="1" value="' + phase.xrayAreas + '" data-idx="' + idx + '" data-field="xrayAreas"></div>' +
+        '</div>';
+      container.appendChild(block);
+    });
+    container.querySelectorAll('input[type=number]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
+        state.phases[idx][field] = +inp.value || 0;
+        recalc();
+      });
+    });
+    container.querySelectorAll('input[type=checkbox]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
+        state.phases[idx][field] = inp.checked;
+        recalc();
+      });
+    });
+    container.querySelectorAll('[data-remove]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        state.phases.splice(+btn.getAttribute('data-remove'), 1);
+        renderPhases(); recalc();
+      });
+    });
+  }
+  $('addPhaseBtn').addEventListener('click', function() {
+    state.phases.push({ freq: 1, weeks: 4, reExamInterval: 9, xrayAtEnd: false, xrayAreas: 2 });
+    renderPhases(); recalc();
+  });
+
+  // ---- TX Phase rendering ----
+  function renderTxPhase() {
+    var tx = state.txPhase;
+    var modeRow = $('txPhaseModeRow');
+    modeRow.innerHTML =
+      '<label><input type="radio" name="txMode" value="insurance" ' + (tx.billingMode === 'insurance' ? 'checked' : '') + '>Billed to insurance</label>' +
+      '<label><input type="radio" name="txMode" value="selfpay" ' + (tx.billingMode === 'selfpay' ? 'checked' : '') + '>Self-pay</label>';
+    modeRow.querySelectorAll('input[type=radio]').forEach(function(inp) {
+      inp.addEventListener('change', function() { tx.billingMode = inp.value; renderTxPhase(); recalc(); });
+    });
+
+    var sub = $('txPhaseInsuranceSub');
+    if (tx.billingMode === 'insurance') {
+      sub.innerHTML =
+        '<div class="insurance-sub">' +
+          '<div class="row">' +
+            '<div><label>Insurance allowed amt ($)</label><input type="number" min="0" step="0.01" value="' + tx.allowedAmount + '" id="txAllowed"></div>' +
+            '<div><label>Copay ($)</label><input type="number" min="0" step="0.01" value="' + tx.copay + '" id="txCopay"></div>' +
+          '</div>' +
+          '<div class="row">' +
+            '<div><label>Coinsurance (%) — patient&#39;s share</label><input type="number" min="0" max="100" step="0.1" value="' + tx.coinsurancePct + '" id="txCoins"></div>' +
+            '<div><label>Max insurance-covered phases</label><input type="text" placeholder="Blank = unlimited" value="' + (tx.maxCoveredVisits == null ? '' : tx.maxCoveredVisits) + '" id="txMaxCovered"></div>' +
+          '</div>' +
+          '<div class="checkbox-row"><input type="checkbox" ' + (tx.billFullIfZero ? 'checked' : '') + ' id="txBillFullIfZero"><label for="txBillFullIfZero">Bill full cash fee if allowed amount is $0</label></div>' +
+          '<div class="checkbox-row" style="margin-bottom:0;"><input type="checkbox" ' + (tx.noExtraCharge ? 'checked' : '') + ' id="txNoExtraCharge"><label for="txNoExtraCharge">No extra charge to patient — covered under the visit\'s copay (ignores copay/coinsurance above, still draws down the deductible)</label></div>' +
+        '</div>';
+      $('txAllowed').addEventListener('input', function() { tx.allowedAmount = parseFloat(this.value) || 0; recalc(); });
+      $('txCopay').addEventListener('input', function() { tx.copay = parseFloat(this.value) || 0; recalc(); });
+      $('txCoins').addEventListener('input', function() { tx.coinsurancePct = parseFloat(this.value) || 0; recalc(); });
+      $('txMaxCovered').addEventListener('input', function() { var v = this.value.trim(); tx.maxCoveredVisits = v === '' ? null : (parseInt(v, 10) || 0); recalc(); });
+      $('txBillFullIfZero').addEventListener('change', function() { tx.billFullIfZero = this.checked; recalc(); });
+      $('txNoExtraCharge').addEventListener('change', function() { tx.noExtraCharge = this.checked; recalc(); });
+    } else {
+      sub.innerHTML = '';
+    }
+
+    var rows = $('txPhaseRows');
+    rows.innerHTML = '';
+    tx.phases.forEach(function(p, idx) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>Phase ' + p.num + '</td>' +
+        '<td><input type="checkbox" style="width:auto;" ' + (p.active ? 'checked' : '') + ' data-idx="' + idx + '" data-field="active"></td>' +
+        '<td><input type="number" min="1" step="1" value="' + p.billMonth + '" style="margin-bottom:0;" data-idx="' + idx + '" data-field="billMonth"></td>';
+      rows.appendChild(tr);
+    });
+    rows.querySelectorAll('input[type=checkbox]').forEach(function(inp) {
+      inp.addEventListener('change', function() { tx.phases[+inp.getAttribute('data-idx')].active = inp.checked; recalc(); });
+    });
+    rows.querySelectorAll('input[type=number]').forEach(function(inp) {
+      inp.addEventListener('input', function() { tx.phases[+inp.getAttribute('data-idx')].billMonth = parseInt(inp.value, 10) || 1; recalc(); });
+    });
+  }
+
+  // ---- bolt-on rows ----
+  function renderBoltOns() {
+    var container = $('boltOnRows');
+    container.innerHTML = '';
+    state.boltOns.forEach(function(b, bidx) {
+      var block = document.createElement('div');
+      block.className = 'block';
+
+      var segmentsHtml = b.segments.map(function(seg, sidx) {
+        return '<div class="segment-row">' +
+          '<div class="segment-row-title">Frequency ' + (sidx + 1) +
+            (b.segments.length > 1 ? '<button type="button" class="danger small" data-bidx="' + bidx + '" data-remove-seg="' + sidx + '">Remove</button>' : '') +
+          '</div>' +
+          '<div class="row">' +
+            '<div><label>Times / week</label><input type="number" min="0" step="1" value="' + seg.timesPerWeek + '" data-bidx="' + bidx + '" data-sidx="' + sidx + '" data-field="timesPerWeek" style="margin-bottom:0;"></div>' +
+            '<div><label>Starting week</label><input type="number" min="1" step="1" value="' + seg.startWeek + '" data-bidx="' + bidx + '" data-sidx="' + sidx + '" data-field="startWeek" style="margin-bottom:0;"></div>' +
+            '<div><label>For how many weeks</label><input type="text" value="' + (seg.durationWeeks == null ? '' : seg.durationWeeks) + '" placeholder="Blank = rest of plan" data-bidx="' + bidx + '" data-sidx="' + sidx + '" data-field="durationWeeks" style="margin-bottom:0;"></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      var insHtml = b.billingMode === 'insurance'
+        ? '<div class="insurance-sub">' +
+            '<div class="row">' +
+              '<div><label>Insurance allowed amt ($)</label><input type="number" min="0" step="0.01" value="' + b.allowedAmount + '" data-idx="' + bidx + '" data-field="allowedAmount"></div>' +
+              '<div><label>Copay ($)</label><input type="number" min="0" step="0.01" value="' + b.copay + '" data-idx="' + bidx + '" data-field="copay"></div>' +
+            '</div>' +
+            '<div class="row">' +
+              '<div><label>Coinsurance (%) — patient&#39;s share</label><input type="number" min="0" max="100" step="0.1" value="' + b.coinsurancePct + '" data-idx="' + bidx + '" data-field="coinsurancePct"></div>' +
+              '<div><label>Max insurance-covered visits</label><input type="text" placeholder="Blank = unlimited" value="' + (b.maxCoveredVisits == null ? '' : b.maxCoveredVisits) + '" data-idx="' + bidx + '" data-field="maxCoveredVisits"></div>' +
+            '</div>' +
+            '<div class="checkbox-row"><input type="checkbox" ' + (b.billFullIfZero ? 'checked' : '') + ' data-idx="' + bidx + '" data-field="billFullIfZero" id="boltZero' + bidx + '"><label for="boltZero' + bidx + '">Bill full cash fee if allowed amount is $0</label></div>' +
+            '<div class="checkbox-row" style="margin-bottom:0;"><input type="checkbox" ' + (b.noExtraCharge ? 'checked' : '') + ' data-idx="' + bidx + '" data-field="noExtraCharge" id="boltNoExtra' + bidx + '"><label for="boltNoExtra' + bidx + '">No extra charge to patient — covered under the visit\'s copay (ignores copay/coinsurance above, still draws down the deductible)</label></div>' +
+          '</div>'
+        : '';
+
+      block.innerHTML =
+        '<div class="block-title"><strong>' + b.label + ' ($' + b.cash.toFixed(2) + ' cash ea)</strong>' +
+          '<label style="margin:0;font-weight:500;"><input type="checkbox" style="width:auto;margin-right:5px;" ' + (b.active ? 'checked' : '') + ' data-idx="' + bidx + '" data-field="active">Used in this plan</label>' +
+        '</div>' +
+        segmentsHtml +
+        '<div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" data-add-seg="' + bidx + '">+ Add another frequency</button></div>' +
+        '<div class="radio-row">' +
+          radioBtn(bidx, 'insurance', b.billingMode, 'Billed to insurance') +
+          radioBtn(bidx, 'selfpay', b.billingMode, 'Self-pay') +
+        '</div>' +
+        insHtml;
+      container.appendChild(block);
+    });
+
+    // segment field inputs
+    container.querySelectorAll('input[data-sidx]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var bidx = +inp.getAttribute('data-bidx'), sidx = +inp.getAttribute('data-sidx'), field = inp.getAttribute('data-field');
+        var seg = state.boltOns[bidx].segments[sidx];
+        if (field === 'durationWeeks') {
+          seg[field] = inp.value.trim() === '' ? null : (parseInt(inp.value, 10) || 0);
+        } else {
+          seg[field] = parseInt(inp.value, 10) || 0;
+        }
+        recalc();
+      });
+    });
+    container.querySelectorAll('[data-add-seg]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        state.boltOns[+btn.getAttribute('data-add-seg')].segments.push(freshSegment());
+        renderBoltOns(); recalc();
+      });
+    });
+    container.querySelectorAll('[data-remove-seg]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var bidx = +btn.getAttribute('data-bidx');
+        state.boltOns[bidx].segments.splice(+btn.getAttribute('data-remove-seg'), 1);
+        renderBoltOns(); recalc();
+      });
+    });
+
+    // insurance sub-field inputs (allowedAmount/copay/coinsurancePct/maxCoveredVisits)
+    container.querySelectorAll('.insurance-sub input[type=number][data-idx], .insurance-sub input[type=text][data-idx]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
+        if (!field) return;
+        var val = inp.value;
+        if (field === 'maxCoveredVisits') {
+          state.boltOns[idx][field] = val.trim() === '' ? null : (parseInt(val, 10) || 0);
+        } else {
+          state.boltOns[idx][field] = parseFloat(val) || 0;
+        }
+        recalc();
+      });
+    });
+    container.querySelectorAll('input[type=checkbox][data-field=active]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        state.boltOns[+inp.getAttribute('data-idx')].active = inp.checked;
+        recalc();
+      });
+    });
+    container.querySelectorAll('input[type=checkbox][data-field=billFullIfZero]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        state.boltOns[+inp.getAttribute('data-idx')].billFullIfZero = inp.checked;
+        recalc();
+      });
+    });
+    container.querySelectorAll('input[type=checkbox][data-field=noExtraCharge]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        state.boltOns[+inp.getAttribute('data-idx')].noExtraCharge = inp.checked;
+        recalc();
+      });
+    });
+    container.querySelectorAll('input[type=radio]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        var idx = +inp.getAttribute('data-idx');
+        state.boltOns[idx].billingMode = inp.value;
+        renderBoltOns(); recalc();
+      });
+    });
+  }
+  function radioBtn(idx, value, current, label) {
+    return '<label><input type="radio" name="billing' + idx + '" value="' + value + '" data-idx="' + idx + '" ' + (current === value ? 'checked' : '') + '>' + label + '</label>';
+  }
+
+  // ---- helpers ----
+  function parseCap(str) {
+    var s = (str || '').trim();
+    return s === '' ? null : (parseInt(s, 10) || 0);
+  }
+  function numVal(id) { return Math.max(0, parseFloat($(id).value) || 0); }
+
+  // ---- schedule builder ----
+  function buildVisits() {
+    var visits = [];
+    var week = 0, visitNum = 0;
+    var lastVisitObj = null;
+
+    state.phases.forEach(function(phase) {
+      var freq = Math.max(0, phase.freq || 0);
+      var weeks = Math.max(0, phase.weeks || 0);
+      var interval = Math.max(0, phase.reExamInterval || 0);
+      var phaseLocalVisit = 0;
+      var phaseTotalVisits = freq * weeks;
+
+      for (var w = 1; w <= weeks; w++) {
+        week++;
+        for (var v = 1; v <= freq; v++) {
+          visitNum++;
+          phaseLocalVisit++;
+          var isReExamHere = interval > 0 && (phaseLocalVisit % interval === 0);
+          var isXrayHere = !!phase.xrayAtEnd && phaseLocalVisit === phaseTotalVisits;
+          var visitObj = {
+            visitNum: visitNum, week: week, monthIdx: Math.ceil(week / 4),
+            isReExam: isReExamHere, isXray: isXrayHere, xrayAreas: isXrayHere ? (phase.xrayAreas || 0) : 0,
+            isAnniversary: false, isReport: false
+          };
+          visits.push(visitObj);
+          lastVisitObj = visitObj;
+        }
+      }
+    });
+
+    if (lastVisitObj) { lastVisitObj.isReExam = true; lastVisitObj.isAnniversary = true; }
+
+    var lastWeek = week;
+    visitNum++;
+    var repWeek = lastWeek + 1;
+    // The report visit folds into the same month row as the visit before it,
+    // rather than spawning its own trailing month for a single visit.
+    var repMonthIdx = lastVisitObj ? lastVisitObj.monthIdx : Math.ceil(repWeek / 4);
+    visits.push({
+      visitNum: visitNum, week: repWeek, monthIdx: repMonthIdx,
+      isReExam: false, isXray: false, xrayAreas: 0,
+      isAnniversary: false, isReport: true
+    });
+
+    return { visits: visits, totalVisits: visitNum, totalWeeks: repWeek };
+  }
+
+  // Bolt-on occurrences: for each frequency segment, take the first N visits
+  // (chronologically) of each applicable week from the care-plan visit schedule.
+  function boltOnOccurrences(boltOn, visits) {
+    if (!boltOn.active) return [];
+    var visitsByWeek = {};
+    visits.forEach(function(v) { (visitsByWeek[v.week] = visitsByWeek[v.week] || []).push(v); });
+    var picked = {};
+    (boltOn.segments || []).forEach(function(seg) {
+      var start = Math.max(1, seg.startWeek || 1);
+      var dur = seg.durationWeeks;
+      var end = (dur == null) ? Infinity : (start + dur - 1);
+      var timesPerWeek = Math.max(0, seg.timesPerWeek || 0);
+      Object.keys(visitsByWeek).forEach(function(wkStr) {
+        var wk = Number(wkStr);
+        if (wk < start || wk > end) return;
+        visitsByWeek[wk].slice(0, timesPerWeek).forEach(function(v) { picked[v.visitNum] = true; });
+      });
+    });
+    return Object.keys(picked).map(Number).sort(function(a, b) { return a - b; });
+  }
+
+  // ---- compute plan ----
+  function computePlan() {
+    var built = buildVisits();
+    var hasInsurance = $('hasInsurance').checked;
+    var deductibleStart = Math.max(0, parseFloat($('deductibleRemaining').value) || 0);
+    var coinsurancePct = Math.max(0, Math.min(100, parseFloat($('coinsurancePct').value) || 0));
+    var copayGeneral = Math.max(0, parseFloat($('copayGeneral').value) || 0);
+    var copayXrayRaw = $('copayXray').value;
+    var copayXray = copayXrayRaw !== '' ? Math.max(0, parseFloat(copayXrayRaw) || 0) : null;
+    var deductibleAppliesToCopay = $('deductibleAppliesToCopay').checked;
+    var billFullIfZeroCore = $('billFullIfZeroCore').checked;
+    var mainVisitCap = parseCap($('mainVisitCap').value);
+    var feeAdjAllowed = numVal('feeAdjAllowed');
+    var feeReExamAllowed = numVal('feeReExamAllowed');
+    var feeXrayAllowedPerArea = numVal('feeXrayAllowedPerArea');
+    var discountPct = currentDiscountPct();
+
+    var runningDeductible = deductibleStart;
+    var mainInsuredCount = 0;
+    var boltInsuredCount = {};
+    state.boltOns.forEach(function(b) { boltInsuredCount[b.key] = 0; });
+    var txInsuredCount = 0;
+
+    function chargeInsuranceLine(allowedAmount, copayAmt, coinsPct, noExtraCharge) {
+      // noExtraCharge: explicitly "$0 patient share beyond the deductible" — forces
+      // coinsurance-mode-at-0%, ignoring whatever copay/coinsurance values were entered,
+      // so the deductible portion still applies normally but nothing on top of it does.
+      var mode = noExtraCharge ? 'coinsurance' : (copayAmt > 0 ? 'copay' : (coinsPct > 0 ? 'coinsurance' : 'full'));
+      var effectiveCoinsPct = noExtraCharge ? 0 : coinsPct;
+      if (mode === 'copay' && !deductibleAppliesToCopay) return copayAmt;
+      if (runningDeductible >= allowedAmount) { runningDeductible -= allowedAmount; return allowedAmount; }
+      else if (runningDeductible > 0) {
+        var remainder = allowedAmount - runningDeductible;
+        var ded = runningDeductible;
+        runningDeductible = 0;
+        var share = mode === 'coinsurance' ? remainder * (effectiveCoinsPct / 100) : (mode === 'copay' ? copayAmt : remainder);
+        return ded + share;
+      } else {
+        return mode === 'coinsurance' ? allowedAmount * (effectiveCoinsPct / 100) : (mode === 'copay' ? copayAmt : allowedAmount);
+      }
+    }
+
+    function newCoreMonth(monthIdx, weekStart, weekEnd) {
+      return { monthIdx: monthIdx, weekStart: weekStart, weekEnd: weekEnd,
+        adjCount: 0, reExamCount: 0, xrayCount: 0, txPhaseCount: 0,
+        subtotal: 0, insuranceSavings: 0, selfPayCash: 0,
+        insuranceVisits: 0, selfPayVisits: 0 };
+    }
+    function newBoltMonth(monthIdx, weekStart, weekEnd) {
+      var counts = {};
+      BOLT_ON_CATALOG.forEach(function(c) { counts[c.key] = 0; });
+      return { monthIdx: monthIdx, weekStart: weekStart, weekEnd: weekEnd,
+        counts: counts, subtotal: 0, insuranceSavings: 0, selfPayCash: 0,
+        insuranceVisits: 0, selfPayVisits: 0 };
+    }
+    // applyLine only tallies dollars — visit-level insurance/self-pay counts are tracked
+    // separately per visit (an exam + adjustment on the same visit is still one visit).
+    function applyLine(m, cashFull, owed, bucket) {
+      m.subtotal += cashFull;
+      if (bucket === 'insurance') m.insuranceSavings += (cashFull - owed);
+      else m.selfPayCash += cashFull;
+    }
+
+    // precompute bolt-on occurrences -> visitNum -> [boltOn indices]
+    var visitBoltOns = {};
+    state.boltOns.forEach(function(b, bi) {
+      boltOnOccurrences(b, built.visits).forEach(function(vn) {
+        (visitBoltOns[vn] = visitBoltOns[vn] || []).push(bi);
+      });
+    });
+
+    // group visits by month (report visit reuses the prior visit's month — see buildVisits)
+    var visitsByMonth = {};
+    built.visits.forEach(function(v) {
+      (visitsByMonth[v.monthIdx] = visitsByMonth[v.monthIdx] || []).push(v);
+    });
+
+    var monthSet = {};
+    Object.keys(visitsByMonth).forEach(function(k) { monthSet[k] = true; });
+    state.txPhase.phases.forEach(function(p) { if (p.active) monthSet[p.billMonth] = true; });
+    var sortedMonths = Object.keys(monthSet).map(Number).sort(function(a, b) { return a - b; });
+
+    var coreMonths = {}, boltMonths = {};
+
+    function weekRangeFor(monthIdx) {
+      var visitsHere = visitsByMonth[monthIdx] || [];
+      var weekStart = (monthIdx - 1) * 4 + 1;
+      var weekEnd = visitsHere.length ? Math.max.apply(null, visitsHere.map(function(v) { return v.week; })) : monthIdx * 4;
+      return { visitsHere: visitsHere, weekStart: weekStart, weekEnd: weekEnd };
+    }
+
+    // For each month in order: core plan (adjustments, re-exams, x-rays, TX Phase) claims
+    // the shared deductible first, then that same month's bolt-on services get whatever's
+    // left. Then we move to the next month — so priority alternates Core M1, Bolt-on M1,
+    // Core M2, Bolt-on M2, etc., rather than draining every month of core before any bolt-on.
+    sortedMonths.forEach(function(monthIdx) {
+      var wr = weekRangeFor(monthIdx);
+      var cm = coreMonths[monthIdx] = coreMonths[monthIdx] || newCoreMonth(monthIdx, wr.weekStart, wr.weekEnd);
+
+      wr.visitsHere.forEach(function(v) {
+        var mainLines = ['adjustment'];
+        if (v.isReExam) mainLines.push('reexam');
+        if (v.isXray) mainLines.push('xray');
+
+        // A visit only counts once toward insurance/self-pay visit totals, no matter how
+        // many billing lines (adjustment + re-exam + x-ray) happen on it. The adjustment
+        // line is always present, so its bucket determines the visit's classification.
+        var visitBucket = null;
+
+        mainLines.forEach(function(type) {
+          var cashFull, owed, bucket;
+          if (type === 'adjustment' || type === 'reexam') {
+            var allowed = type === 'adjustment' ? feeAdjAllowed : feeReExamAllowed;
+            cashFull = type === 'adjustment' ? CASH.adjustment : CASH.reexam;
+            var notCovered = billFullIfZeroCore && allowed <= 0;
+            if (notCovered) { owed = cashFull; bucket = 'selfpay'; }
+            else if (hasInsurance && (mainVisitCap === null || mainInsuredCount < mainVisitCap)) {
+              mainInsuredCount++;
+              owed = chargeInsuranceLine(allowed, copayGeneral, coinsurancePct);
+              bucket = 'insurance';
+            } else { owed = cashFull; bucket = 'selfpay'; }
+            if (type === 'adjustment') cm.adjCount++; else cm.reExamCount++;
+          } else {
+            var areas = v.xrayAreas || 0;
+            cashFull = CASH.xrayPerArea * areas;
+            var allowedX = feeXrayAllowedPerArea * areas;
+            var notCoveredX = billFullIfZeroCore && allowedX <= 0;
+            if (notCoveredX) { owed = cashFull; bucket = 'selfpay'; }
+            else if (hasInsurance && (mainVisitCap === null || mainInsuredCount < mainVisitCap)) {
+              owed = chargeInsuranceLine(allowedX, copayXray != null ? copayXray : copayGeneral, coinsurancePct);
+              bucket = 'insurance';
+            } else { owed = cashFull; bucket = 'selfpay'; }
+            cm.xrayCount++;
+          }
+          applyLine(cm, cashFull, owed, bucket);
+          if (type === 'adjustment') visitBucket = bucket;
+        });
+
+        if (visitBucket === 'insurance') cm.insuranceVisits++; else cm.selfPayVisits++;
+      });
+
+      state.txPhase.phases.forEach(function(p) {
+        if (!p.active || p.billMonth !== monthIdx) return;
+        var cashFull = CASH.txPhase, owed, bucket;
+        var txNotCovered = state.txPhase.billFullIfZero && state.txPhase.allowedAmount <= 0 && !state.txPhase.noExtraCharge;
+        if (state.txPhase.billingMode === 'selfpay' || txNotCovered) { owed = cashFull; bucket = 'selfpay'; }
+        else {
+          if (state.txPhase.maxCoveredVisits === null || txInsuredCount < state.txPhase.maxCoveredVisits) {
+            txInsuredCount++;
+            owed = chargeInsuranceLine(state.txPhase.allowedAmount, state.txPhase.copay, state.txPhase.coinsurancePct, state.txPhase.noExtraCharge);
+            bucket = 'insurance';
+          } else { owed = cashFull; bucket = 'selfpay'; }
+        }
+        applyLine(cm, cashFull, owed, bucket);
+        cm.txPhaseCount++;
+        // TX Phase does NOT add to the visit count — it's a service performed during a
+        // visit the patient is already at for their adjustment (already counted above),
+        // not a separate physical visit. Its own dollar amount still flows through
+        // applyLine, and its own count lives in the TX Phase column.
+      });
+
+      // This same month's bolt-on services — after core has already taken its share
+      // of the deductible for this month, before moving on to the next month's core.
+      wr.visitsHere.forEach(function(v) {
+        var lines = visitBoltOns[v.visitNum] || [];
+        if (!lines.length) return;
+        var bm = boltMonths[monthIdx] = boltMonths[monthIdx] || newBoltMonth(monthIdx, wr.weekStart, wr.weekEnd);
+        // A visit with multiple bolt-on services still counts once toward the visit
+        // totals; it's an insurance visit if any of that visit's bolt-on lines were billed
+        // to insurance, otherwise it's self-pay.
+        var visitHadInsuranceLine = false;
+        lines.forEach(function(bi) {
+          var b = state.boltOns[bi];
+          var cashFull = b.cash, owed, bucket;
+          var boltNotCovered = b.billFullIfZero && b.allowedAmount <= 0 && !b.noExtraCharge;
+          if (b.billingMode === 'selfpay' || boltNotCovered) { owed = cashFull; bucket = 'selfpay'; }
+          else {
+            if (b.maxCoveredVisits === null || boltInsuredCount[b.key] < b.maxCoveredVisits) {
+              boltInsuredCount[b.key]++;
+              owed = chargeInsuranceLine(b.allowedAmount, b.copay, b.coinsurancePct, b.noExtraCharge);
+              bucket = 'insurance';
+            } else { owed = cashFull; bucket = 'selfpay'; }
+          }
+          applyLine(bm, cashFull, owed, bucket);
+          bm.counts[b.key]++;
+          if (bucket === 'insurance') visitHadInsuranceLine = true;
+        });
+        if (visitHadInsuranceLine) bm.insuranceVisits++; else bm.selfPayVisits++;
+      });
+    });
+
+    function finalize(dict) {
+      var list = Object.keys(dict).map(function(k) { return dict[k]; }).sort(function(a, b) { return a.monthIdx - b.monthIdx; });
+      var grand = { subtotal: 0, insuranceSavings: 0, selfPaySavings: 0, total: 0, insuranceVisits: 0, selfPayVisits: 0 };
+      list.forEach(function(m) {
+        m.selfPaySavings = m.selfPayCash * (discountPct / 100);
+        m.total = m.subtotal - m.insuranceSavings - m.selfPaySavings;
+        grand.subtotal += m.subtotal; grand.insuranceSavings += m.insuranceSavings;
+        grand.selfPaySavings += m.selfPaySavings; grand.total += m.total;
+        grand.insuranceVisits += m.insuranceVisits; grand.selfPayVisits += m.selfPayVisits;
+      });
+      return { list: list, grand: grand };
+    }
+
+    var coreResult = finalize(coreMonths);
+    var boltResult = finalize(boltMonths);
+
+    var coreByMonth = {};
+    coreResult.list.forEach(function(m) { coreByMonth[m.monthIdx] = m; });
+    boltResult.list.forEach(function(m) {
+      var core = coreByMonth[m.monthIdx];
+      m.combinedTotal = (core ? core.total : 0) + m.total;
+    });
+    var combinedGrandTotal = coreResult.grand.total + boltResult.grand.total;
+
+    var reExamVisitNums = built.visits.filter(function(v) { return v.isReExam; }).map(function(v) { return v.visitNum; });
+    var xrayVisitNums = built.visits.filter(function(v) { return v.isXray; }).map(function(v) { return v.visitNum; });
+
+    return {
+      totalVisits: built.totalVisits, totalWeeks: built.totalWeeks,
+      reExamVisitNums: reExamVisitNums, xrayVisitNums: xrayVisitNums,
+      coreMonths: coreResult.list, coreGrand: coreResult.grand,
+      boltMonths: boltResult.list, boltGrand: boltResult.grand,
+      combinedGrandTotal: combinedGrandTotal,
+      discountPct: discountPct, hasInsurance: hasInsurance,
+      deductibleRemainingAfter: runningDeductible
+    };
+  }
+
+  function money(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  function render(plan) {
+    var out = $('output');
+    if (!plan.totalVisits) { out.innerHTML = '<div class="card empty-note">Add at least one care plan phase to generate a financial plan.</div>'; return; }
+    var name = $('patientName').value.trim();
+    var start = $('startDate').value;
+
+    var html = '<div class="card">';
+    html += '<div class="patient-header"><h2>' + (name ? escapeHtml(name) : 'Financial Plan') + '</h2><span style="color:#777;font-size:12.5px;">' + (start ? 'Start: ' + start : '') + '</span></div>';
+
+    html += '<div class="summary-strip">';
+    html += stat(plan.totalVisits, 'Total Visits');
+    html += stat(plan.totalWeeks, 'Total Weeks');
+    html += stat(money(plan.coreGrand.total), 'Core Plan Total Due');
+    html += stat(money(plan.combinedGrandTotal), 'Total Incl. All Add-Ons');
+    html += stat(money(plan.coreGrand.insuranceSavings + plan.boltGrand.insuranceSavings), 'Total Insurance Savings');
+    html += '</div>';
+
+    if (plan.hasInsurance) html += '<p style="color:#666;font-size:12.5px;">Deductible remaining at end of plan: ' + money(plan.deductibleRemainingAfter) + '.</p>';
+    html += '<p style="color:#666;font-size:12.5px;">Re-exams (incl. anniversary) at visit #: ' + plan.reExamVisitNums.join(', ') + '</p>';
+    if (plan.xrayVisitNums.length) html += '<p style="color:#666;font-size:12.5px;">X-rays at visit #: ' + plan.xrayVisitNums.join(', ') + '</p>';
+    html += '<p style="color:#666;font-size:12.5px;">Visit ' + (plan.totalVisits - 1) + ' = anniversary exam. Visit ' + plan.totalVisits + ' = final report visit (adjustment included).</p>';
+
+    html += '<h3>Core plan</h3>';
+    html += '<table><thead><tr><th>Month</th><th>Weeks</th><th class="num">Adj</th><th class="num">Re-Exams</th><th class="num">X-Rays</th><th class="num">TX Phase</th><th class="num">Ins. Visits</th><th class="num">Self-Pay Visits</th><th class="num">Subtotal</th><th class="num">Insurance Savings</th><th class="num">Self-Pay Savings</th><th class="num">Total Due</th></tr></thead><tbody>';
+    plan.coreMonths.forEach(function(m) {
+      html += '<tr><td>Month ' + m.monthIdx + '</td><td>Weeks ' + m.weekStart + '–' + m.weekEnd + '</td>' +
+        '<td class="num">' + m.adjCount + '</td><td class="num">' + m.reExamCount + '</td><td class="num">' + m.xrayCount + '</td><td class="num">' + m.txPhaseCount + '</td>' +
+        '<td class="num">' + m.insuranceVisits + '</td><td class="num">' + m.selfPayVisits + '</td>' +
+        '<td class="num">' + money(m.subtotal) + '</td><td class="num">' + (m.insuranceSavings > 0 ? '−' + money(m.insuranceSavings) : money(0)) + '</td>' +
+        '<td class="num">' + (m.selfPaySavings > 0 ? '−' + money(m.selfPaySavings) : money(0)) + '</td><td class="num">' + money(m.total) + '</td></tr>';
+    });
+    html += '</tbody><tfoot><tr><td colspan="6">Core Plan Total</td><td class="num">' + plan.coreGrand.insuranceVisits + '</td><td class="num">' + plan.coreGrand.selfPayVisits + '</td><td class="num">' + money(plan.coreGrand.subtotal) + '</td><td class="num">' + (plan.coreGrand.insuranceSavings > 0 ? '−' + money(plan.coreGrand.insuranceSavings) : money(0)) + '</td><td class="num">' + (plan.coreGrand.selfPaySavings > 0 ? '−' + money(plan.coreGrand.selfPaySavings) : money(0)) + '</td><td class="num">' + money(plan.coreGrand.total) + '</td></tr></tfoot></table>';
+
+    if (plan.boltMonths.length) {
+      html += '<h3>Bolt-on services (Decomp / Laser / Acupuncture / Add-On) — optional, shown separately</h3>';
+      html += '<table><thead><tr><th>Month</th><th>Weeks</th><th class="num">Decomp</th><th class="num">Laser</th><th class="num">Acupuncture</th><th class="num">Add-On</th><th class="num">Ins. Visits</th><th class="num">Self-Pay Visits</th><th class="num">Subtotal</th><th class="num">Insurance Savings</th><th class="num">Self-Pay Savings</th><th class="num">Total Due</th><th class="num">Total Incl. Core</th></tr></thead><tbody>';
+      plan.boltMonths.forEach(function(m) {
+        html += '<tr><td>Month ' + m.monthIdx + '</td><td>Weeks ' + m.weekStart + '–' + m.weekEnd + '</td>' +
+          '<td class="num">' + m.counts.decomp + '</td><td class="num">' + m.counts.laser + '</td><td class="num">' + m.counts.acupuncture + '</td><td class="num">' + m.counts.addon + '</td>' +
+          '<td class="num">' + m.insuranceVisits + '</td><td class="num">' + m.selfPayVisits + '</td>' +
+          '<td class="num">' + money(m.subtotal) + '</td><td class="num">' + (m.insuranceSavings > 0 ? '−' + money(m.insuranceSavings) : money(0)) + '</td>' +
+          '<td class="num">' + (m.selfPaySavings > 0 ? '−' + money(m.selfPaySavings) : money(0)) + '</td><td class="num">' + money(m.total) + '</td><td class="num">' + money(m.combinedTotal) + '</td></tr>';
+      });
+      html += '</tbody><tfoot><tr><td colspan="6">Bolt-On Total</td><td class="num">' + plan.boltGrand.insuranceVisits + '</td><td class="num">' + plan.boltGrand.selfPayVisits + '</td><td class="num">' + money(plan.boltGrand.subtotal) + '</td><td class="num">' + (plan.boltGrand.insuranceSavings > 0 ? '−' + money(plan.boltGrand.insuranceSavings) : money(0)) + '</td><td class="num">' + (plan.boltGrand.selfPaySavings > 0 ? '−' + money(plan.boltGrand.selfPaySavings) : money(0)) + '</td><td class="num">' + money(plan.boltGrand.total) + '</td><td class="num">' + money(plan.combinedGrandTotal) + '</td></tr></tfoot></table>';
+    }
+
+    html += '</div>';
+    out.innerHTML = html;
+  }
+
+  function stat(value, label) { return '<div class="stat"><div class="num-big">' + value + '</div><div class="lbl">' + label + '</div></div>'; }
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  var lastPlan = null;
+  function recalc() { lastPlan = computePlan(); render(lastPlan); }
+
+  ['patientName', 'startDate',
+   'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
+   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore']
+    .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
+
+  $('newPatientBtn').addEventListener('click', function() {
+    state.phases = [{ freq: 3, weeks: 4, reExamInterval: 9, xrayAtEnd: false, xrayAreas: 2 }];
+    state.savingsKey = 'none';
+    state.boltOns = freshBoltOns();
+    state.txPhase = freshTxPhase();
+    $('patientName').value = ''; $('startDate').value = '';
+    $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
+    $('coinsurancePct').value = 0; $('copayGeneral').value = 0; $('copayXray').value = '';
+    $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = '';
+    $('billFullIfZeroCore').checked = false;
+    $('feeAdjAllowed').value = 0; $('feeReExamAllowed').value = 0; $('feeXrayAllowedPerArea').value = 0;
+    renderPhases(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
+  });
+
+  $('printBtn').addEventListener('click', function() { window.print(); });
+
+  $('copyBtn').addEventListener('click', function() {
+    if (!lastPlan || !lastPlan.totalVisits) return;
+    var name = $('patientName').value.trim() || 'Patient';
+    var lines = [];
+    lines.push(name + ' — Care Plan Financial Plan');
+    if ($('startDate').value) lines.push('Start: ' + $('startDate').value);
+    lines.push('Total visits: ' + lastPlan.totalVisits + ' over ' + lastPlan.totalWeeks + ' weeks');
+    lines.push('Re-exams (incl. anniversary) at visit #: ' + lastPlan.reExamVisitNums.join(', '));
+    if (lastPlan.xrayVisitNums.length) lines.push('X-rays at visit #: ' + lastPlan.xrayVisitNums.join(', '));
+    lines.push('Savings applied: ' + lastPlan.discountPct + '% off self-pay charges only');
+    lines.push('');
+    lines.push('CORE PLAN');
+    lines.push(['Month', 'Weeks', 'Adj', 'Re-Exams', 'X-Rays', 'TX Phase', 'Ins. Visits', 'Self-Pay Visits', 'Subtotal', 'Insurance Savings', 'Self-Pay Savings', 'Total Due'].join('\t'));
+    lastPlan.coreMonths.forEach(function(m) {
+      lines.push(['Month ' + m.monthIdx, 'Weeks ' + m.weekStart + '-' + m.weekEnd, m.adjCount, m.reExamCount, m.xrayCount, m.txPhaseCount, m.insuranceVisits, m.selfPayVisits, money(m.subtotal), money(m.insuranceSavings), money(m.selfPaySavings), money(m.total)].join('\t'));
+    });
+    lines.push(['Core Plan Total', '', '', '', '', '', lastPlan.coreGrand.insuranceVisits, lastPlan.coreGrand.selfPayVisits, money(lastPlan.coreGrand.subtotal), money(lastPlan.coreGrand.insuranceSavings), money(lastPlan.coreGrand.selfPaySavings), money(lastPlan.coreGrand.total)].join('\t'));
+    if (lastPlan.boltMonths.length) {
+      lines.push('');
+      lines.push('BOLT-ON SERVICES');
+      lines.push(['Month', 'Weeks', 'Decomp', 'Laser', 'Acupuncture', 'Add-On', 'Ins. Visits', 'Self-Pay Visits', 'Subtotal', 'Insurance Savings', 'Self-Pay Savings', 'Total Due', 'Total Incl. Core'].join('\t'));
+      lastPlan.boltMonths.forEach(function(m) {
+        lines.push(['Month ' + m.monthIdx, 'Weeks ' + m.weekStart + '-' + m.weekEnd, m.counts.decomp, m.counts.laser, m.counts.acupuncture, m.counts.addon, m.insuranceVisits, m.selfPayVisits, money(m.subtotal), money(m.insuranceSavings), money(m.selfPaySavings), money(m.total), money(m.combinedTotal)].join('\t'));
+      });
+      lines.push(['Bolt-On Total', '', '', '', '', '', lastPlan.boltGrand.insuranceVisits, lastPlan.boltGrand.selfPayVisits, money(lastPlan.boltGrand.subtotal), money(lastPlan.boltGrand.insuranceSavings), money(lastPlan.boltGrand.selfPaySavings), money(lastPlan.boltGrand.total), money(lastPlan.combinedGrandTotal)].join('\t'));
+    }
+    var text = lines.join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function() { fallbackCopy(text); });
+    else fallbackCopy(text);
+  });
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  renderPhases(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
+})();
+</script>
+
+</body>
+</html>
