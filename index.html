@@ -65,9 +65,11 @@
   .radio-row label { display:flex; align-items:center; gap:5px; font-weight:500; color:#333; margin-bottom:0; }
   .radio-row input { width:auto; margin:0; }
   .insurance-sub { border-top: 1px dashed #ddd; margin-top: 8px; padding-top: 8px; }
+  #printView { display: none; }
   @media print {
     body { background: #fff; padding: 0; }
-    .no-print { display: none !important; }
+    .no-print, #output { display: none !important; }
+    #printView { display: block; }
     .card { border: none; padding: 0; margin-bottom: 20px; }
     table { page-break-inside: auto; }
     tr { page-break-inside: avoid; page-break-after: auto; }
@@ -77,6 +79,34 @@
     .print-page-break h3 { page-break-before: avoid; break-before: avoid; margin-top: 0; page-break-after: avoid; break-after: avoid; }
     .print-page-break table { page-break-before: avoid; break-before: avoid; }
   }
+
+  /* ---- printed patient plan (mirrors the office's paper form) ---- */
+  .pv-page { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 9.5px; page-break-after: always; }
+  .pv-page:last-child { page-break-after: auto; }
+  .pv-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 6px; }
+  .pv-header-left { display: flex; align-items: center; gap: 10px; }
+  .pv-logo { max-height: 60px; max-width: 100px; }
+  .pv-brand { font-size: 11px; font-weight: 700; }
+  .pv-header-right { text-align: right; font-size: 10px; font-weight: 700; }
+  .pv-title { text-align: center; font-size: 13px; font-weight: 700; margin: 4px 0 8px; text-transform: uppercase; }
+  .pv-patient-row { display: flex; justify-content: space-between; border-bottom: 1px solid #999; padding-bottom: 4px; margin-bottom: 4px; font-size: 10px; }
+  .pv-fill { border-bottom: 1px solid #999; padding: 0 30px 0 4px; }
+  .pv-disclaimer { font-size: 8px; color: #333; margin-bottom: 8px; line-height: 1.35; }
+  .pv-summary-box { border: 1px solid #111; padding: 6px 8px; margin-bottom: 8px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; font-size: 9px; }
+  .pv-summary-box h4 { font-size: 9px; margin: 0 0 3px; text-decoration: underline; }
+  .pv-summary-box .col > div { margin-bottom: 2px; }
+  .pv-features { font-size: 8.5px; margin-bottom: 8px; line-height: 1.35; }
+  .pv-features b { font-weight: 700; }
+  .pv-features ol { margin: 3px 0 0; padding-left: 16px; }
+  table.pv-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
+  table.pv-table th, table.pv-table td { border: 1px solid #333; padding: 3px 5px; vertical-align: top; }
+  table.pv-table th { background: #e4e2da; text-align: left; }
+  table.pv-table td.num, table.pv-table th.num { text-align: right; }
+  table.pv-table tfoot td { font-weight: 700; background: #f2f1ec; }
+  .pv-signed-row { display: flex; gap: 40px; margin-top: 20px; font-size: 9px; }
+  .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
+  .pv-footnote { font-size: 8px; font-style: italic; color: #333; margin-top: 6px; }
+  .pv-page2-img { width: 100%; display: block; }
 </style>
 </head>
 <body>
@@ -90,20 +120,42 @@
       <h2>Patient</h2>
       <div class="row">
         <div><label>Patient name</label><input type="text" id="patientName" placeholder="Jane Doe"></div>
-        <div><label>Plan start date (optional)</label><input type="date" id="startDate"></div>
+        <div><label>Plan start date</label><input type="date" id="startDate"></div>
+      </div>
+      <div class="hint">Skipped weeks don't change the care plan itself (visit count, re-exams, x-rays, cost) — they only push the printed calendar dates out by a week for each one, since that week won't have any visits. A footnote naming the closed week(s) prints under the schedule table.</div>
+      <div id="skipWeekRows"></div>
+      <div class="btn-bar"><button type="button" class="secondary small" id="addSkipWeekBtn">+ Add a skipped week</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Practice header (for the printed plan)</h2>
+      <div class="row">
+        <div><label>Practice / doctor name</label><input type="text" id="practiceName" value="Burke Larsen, DC"></div>
+        <div><label>Phone</label><input type="text" id="practicePhone" value="(801) 479-3200"></div>
       </div>
     </div>
 
     <div class="card">
       <h2>Care plan phases</h2>
-      <div class="hint">Add a row per frequency phase. Each phase has its own re-exam interval (resets per phase) and its own x-ray indicator + area count. X-rays happen at the END of that phase, right before the next frequency starts — for your last phase, that's the anniversary x-ray. The last visit of your final phase always doubles as the anniversary exam (billed as a re-exam), and one final report visit — adjustment only — is auto-added right after it. Adjustment is always billed alongside any re-exam/x-ray day; these are never stand-alone visits.</div>
+      <div class="hint">Add a row per frequency phase. Each phase has its own re-exam interval (resets per phase). The last visit of your final phase always doubles as the anniversary exam (billed as a re-exam), and one final report visit — adjustment only — is auto-added right after it. Adjustment is always billed alongside any re-exam/x-ray day; these are never stand-alone visits.</div>
       <div id="phaseRows"></div>
       <div class="btn-bar"><button type="button" class="secondary small" id="addPhaseBtn">+ Add phase</button></div>
     </div>
 
     <div class="card">
+      <h2>X-rays</h2>
+      <div class="hint">X-rays are tied to WHICH re-exam they happen at — counted across the whole plan in order (re-exam #1, #2, #3...), not to the end of a specific phase. E.g. "x-ray at re-exam #4" fires whenever the 4th re-exam of the plan lands, regardless of which phase it's in.</div>
+      <div id="xrayTriggerRows"></div>
+      <div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" id="addXrayTriggerBtn">+ Add x-ray trigger</button></div>
+      <div id="xrayFinalRow"></div>
+    </div>
+
+    <div class="card">
       <h2>Insurance</h2>
       <div class="checkbox-row"><input type="checkbox" id="hasInsurance"><label for="hasInsurance">Patient has insurance to bill (unchecked = straight cash fees throughout)</label></div>
+      <div class="row">
+        <div><label>Insurance plan / carrier (optional, shown on the printed plan)</label><input type="text" id="insurancePlanName" placeholder="e.g. SelectHealth PPO"></div>
+      </div>
       <div class="row">
         <div><label>Deductible remaining ($)</label><input type="number" id="deductibleRemaining" value="0" min="0" step="0.01"></div>
         <div><label>Coinsurance (%) — patient's share</label><input type="number" id="coinsurancePct" value="0" min="0" max="100" step="0.1"></div>
@@ -170,6 +222,7 @@
 </div>
 
 <div id="output"></div>
+<div id="printView"></div>
 
 <script>
 (function() {
@@ -220,11 +273,17 @@
     };
   }
 
+  function freshXrayPlan() {
+    return { triggers: [{ reExamNumber: 4, areas: 2 }], atFinal: true, finalAreas: 2 };
+  }
+
   var state = {
     phases: [
-      { freq: 3, weeks: 4, reExamInterval: 9, xrayAtEnd: false, xrayAreas: 2 },
-      { freq: 2, weeks: 4, reExamInterval: 10, xrayAtEnd: true, xrayAreas: 2 }
+      { freq: 3, weeks: 16, reExamInterval: 9 },
+      { freq: 2, weeks: 20, reExamInterval: 9 }
     ],
+    xrayPlan: freshXrayPlan(),
+    skipWeeks: [],
     savingsKey: 'none',
     boltOns: freshBoltOns(),
     txPhase: freshTxPhase()
@@ -264,10 +323,6 @@
           '<div><label>Visits / week</label><input type="number" min="0" step="1" value="' + phase.freq + '" data-idx="' + idx + '" data-field="freq"></div>' +
           '<div><label>Duration (weeks)</label><input type="number" min="0" step="1" value="' + phase.weeks + '" data-idx="' + idx + '" data-field="weeks"></div>' +
           '<div><label>Re-exam every ___ visits (this phase)</label><input type="number" min="0" step="1" value="' + phase.reExamInterval + '" data-idx="' + idx + '" data-field="reExamInterval"></div>' +
-        '</div>' +
-        '<div class="row">' +
-          '<div class="checkbox-row" style="margin-top:6px;"><input type="checkbox" ' + (phase.xrayAtEnd ? 'checked' : '') + ' data-idx="' + idx + '" data-field="xrayAtEnd" id="xrayEnd' + idx + '"><label for="xrayEnd' + idx + '">X-ray at end of this phase</label></div>' +
-          '<div><label>Areas</label><input type="number" min="0" step="1" value="' + phase.xrayAreas + '" data-idx="' + idx + '" data-field="xrayAreas"></div>' +
         '</div>';
       container.appendChild(block);
     });
@@ -275,13 +330,6 @@
       inp.addEventListener('input', function() {
         var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
         state.phases[idx][field] = +inp.value || 0;
-        recalc();
-      });
-    });
-    container.querySelectorAll('input[type=checkbox]').forEach(function(inp) {
-      inp.addEventListener('change', function() {
-        var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
-        state.phases[idx][field] = inp.checked;
         recalc();
       });
     });
@@ -293,8 +341,89 @@
     });
   }
   $('addPhaseBtn').addEventListener('click', function() {
-    state.phases.push({ freq: 1, weeks: 4, reExamInterval: 9, xrayAtEnd: false, xrayAreas: 2 });
+    state.phases.push({ freq: 1, weeks: 4, reExamInterval: 9 });
     renderPhases(); recalc();
+  });
+
+  // ---- x-ray timing (plan-wide, tied to which re-exam # it lands on) ----
+  function renderXrayPlan() {
+    var xp = state.xrayPlan;
+    var container = $('xrayTriggerRows');
+    container.innerHTML = '';
+    xp.triggers.forEach(function(t, idx) {
+      var row = document.createElement('div');
+      row.className = 'segment-row';
+      row.innerHTML =
+        '<div class="row" style="align-items:flex-end;">' +
+          '<div><label>X-ray at re-exam #</label><input type="number" min="1" step="1" value="' + t.reExamNumber + '" data-idx="' + idx + '" data-field="reExamNumber" style="margin-bottom:0;"></div>' +
+          '<div><label>Areas</label><input type="number" min="0" step="1" value="' + t.areas + '" data-idx="' + idx + '" data-field="areas" style="margin-bottom:0;"></div>' +
+          '<div style="flex:0;"><button type="button" class="danger small" data-remove-trigger="' + idx + '">Remove</button></div>' +
+        '</div>';
+      container.appendChild(row);
+    });
+    container.querySelectorAll('input[type=number]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
+        xp.triggers[idx][field] = +inp.value || 0;
+        recalc();
+      });
+    });
+    container.querySelectorAll('[data-remove-trigger]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        xp.triggers.splice(+btn.getAttribute('data-remove-trigger'), 1);
+        renderXrayPlan(); recalc();
+      });
+    });
+
+    var finalRow = $('xrayFinalRow');
+    finalRow.innerHTML =
+      '<div class="checkbox-row"><input type="checkbox" id="xrayAtFinal" ' + (xp.atFinal ? 'checked' : '') + '><label for="xrayAtFinal">Also x-ray at the final/anniversary exam</label></div>' +
+      (xp.atFinal ? '<div style="max-width:140px;"><label>Areas</label><input type="number" min="0" step="1" value="' + xp.finalAreas + '" id="xrayFinalAreas" style="margin-bottom:0;"></div>' : '');
+    $('xrayAtFinal').addEventListener('change', function() { xp.atFinal = this.checked; renderXrayPlan(); recalc(); });
+    if (xp.atFinal) $('xrayFinalAreas').addEventListener('input', function() { xp.finalAreas = +this.value || 0; recalc(); });
+  }
+  $('addXrayTriggerBtn').addEventListener('click', function() {
+    state.xrayPlan.triggers.push({ reExamNumber: 1, areas: 2 });
+    renderXrayPlan(); recalc();
+  });
+
+  // ---- skipped weeks (office closures) ----
+  function renderSkipWeeks() {
+    var container = $('skipWeekRows');
+    container.innerHTML = '';
+    state.skipWeeks.forEach(function(sw, idx) {
+      var row = document.createElement('div');
+      row.className = 'segment-row';
+      row.innerHTML =
+        '<div class="row" style="align-items:flex-end;">' +
+          '<div><label>Skip the week after plan week #</label><input type="number" min="1" step="1" value="' + sw.afterWeek + '" data-idx="' + idx + '" data-field="afterWeek" style="margin-bottom:0;"></div>' +
+          '<div><label>Reason (optional, prints on the plan)</label><input type="text" value="' + escapeHtml(sw.reason || '') + '" placeholder="e.g. Thanksgiving" data-idx="' + idx + '" data-field="reason" style="margin-bottom:0;"></div>' +
+          '<div style="flex:0;"><button type="button" class="danger small" data-remove-skip="' + idx + '">Remove</button></div>' +
+        '</div>';
+      container.appendChild(row);
+    });
+    container.querySelectorAll('input[data-field=afterWeek]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        state.skipWeeks[+inp.getAttribute('data-idx')].afterWeek = +inp.value || 0;
+        recalc();
+      });
+    });
+    container.querySelectorAll('input[data-field=reason]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        state.skipWeeks[+inp.getAttribute('data-idx')].reason = inp.value;
+        recalc();
+      });
+    });
+    container.querySelectorAll('[data-remove-skip]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        state.skipWeeks.splice(+btn.getAttribute('data-remove-skip'), 1);
+        renderSkipWeeks(); recalc();
+      });
+    });
+  }
+  $('addSkipWeekBtn').addEventListener('click', function() {
+    state.skipWeeks.push({ afterWeek: 1, reason: '' });
+    renderSkipWeeks(); recalc();
   });
 
   // ---- TX Phase rendering ----
@@ -490,7 +619,6 @@
       var weeks = Math.max(0, phase.weeks || 0);
       var interval = Math.max(0, phase.reExamInterval || 0);
       var phaseLocalVisit = 0;
-      var phaseTotalVisits = freq * weeks;
 
       for (var w = 1; w <= weeks; w++) {
         week++;
@@ -498,10 +626,9 @@
           visitNum++;
           phaseLocalVisit++;
           var isReExamHere = interval > 0 && (phaseLocalVisit % interval === 0);
-          var isXrayHere = !!phase.xrayAtEnd && phaseLocalVisit === phaseTotalVisits;
           var visitObj = {
             visitNum: visitNum, week: week, monthIdx: Math.ceil(week / 4),
-            isReExam: isReExamHere, isXray: isXrayHere, xrayAreas: isXrayHere ? (phase.xrayAreas || 0) : 0,
+            isReExam: isReExamHere, isXray: false, xrayAreas: 0,
             isAnniversary: false, isReport: false
           };
           visits.push(visitObj);
@@ -511,6 +638,24 @@
     });
 
     if (lastVisitObj) { lastVisitObj.isReExam = true; lastVisitObj.isAnniversary = true; }
+
+    // X-rays are tied to WHICH re-exam they land on across the whole plan (in
+    // chronological order), not to the boundary of a specific phase — e.g. "x-ray
+    // at re-exam #4" fires whenever the 4th re-exam happens, wherever that falls.
+    var reExamCounter = 0;
+    var reExamVisits = [];
+    visits.forEach(function(v) {
+      if (v.isReExam) { reExamCounter++; v.reExamNumber = reExamCounter; reExamVisits.push(v); }
+    });
+    (state.xrayPlan.triggers || []).forEach(function(t) {
+      var target = reExamVisits[t.reExamNumber - 1];
+      if (target) { target.isXray = true; target.xrayAreas = (target.xrayAreas || 0) + (t.areas || 0); }
+    });
+    if (state.xrayPlan.atFinal && reExamVisits.length) {
+      var finalVisit = reExamVisits[reExamVisits.length - 1];
+      finalVisit.isXray = true;
+      finalVisit.xrayAreas = (finalVisit.xrayAreas || 0) + (state.xrayPlan.finalAreas || 0);
+    }
 
     var lastWeek = week;
     visitNum++;
@@ -834,26 +979,201 @@
   function stat(value, label) { return '<div class="stat"><div class="num-big">' + value + '</div><div class="lbl">' + label + '</div></div>'; }
   function escapeHtml(s) { return s.replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
-  var lastPlan = null;
-  function recalc() { lastPlan = computePlan(); render(lastPlan); }
+  // Fill these in with data: URLs once available — the logo shows in the printed
+  // header, the page-2 image prints as the backside (admin savings / signature-on-file).
+  var LOGO_DATA_URI = '';
+  var PAGE2_DATA_URI = '';
 
-  ['patientName', 'startDate',
+  // ---- calendar date helpers (start date + skip-a-week support) ----
+  function parseSkipWeeks() {
+    return state.skipWeeks.map(function(sw) { return sw.afterWeek; }).filter(function(n) { return n > 0; });
+  }
+  // A plan week's real calendar slot is pushed out by one week for every skip
+  // point at or before it — the plan's own numbering (re-exams, x-rays, phases)
+  // never changes, only which real-world week it lands in.
+  function calendarWeekIndex(planWeek, skipList) {
+    var pushes = skipList.filter(function(w) { return w < planWeek; }).length;
+    return planWeek + pushes;
+  }
+  function addDays(dateStr, days) {
+    var d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d;
+  }
+  function fmtShortDate(d) { return (d.getMonth() + 1) + '/' + d.getDate(); }
+  function calendarRangeForWeeks(weekStart, weekEnd, startDateStr, skipList) {
+    if (!startDateStr) return '___ / ___ to ___ / ___';
+    var startD = addDays(startDateStr, 7 * (calendarWeekIndex(weekStart, skipList) - 1));
+    var endD = addDays(startDateStr, 7 * (calendarWeekIndex(weekEnd, skipList) - 1) + 6);
+    return fmtShortDate(startD) + ' to ' + fmtShortDate(endD);
+  }
+  // One footnote line per skipped week, naming the actual closed calendar date
+  // range (and reason, if given) so the patient can see why the schedule has a gap.
+  function skippedWeekNotes(startDateStr) {
+    if (!startDateStr || !state.skipWeeks.length) return [];
+    var skipList = parseSkipWeeks();
+    return state.skipWeeks.map(function(sw) {
+      var closedIdx = calendarWeekIndex(sw.afterWeek, skipList) + 1;
+      var closedStart = addDays(startDateStr, 7 * (closedIdx - 1));
+      var closedEnd = addDays(startDateStr, 7 * (closedIdx - 1) + 6);
+      var range = fmtShortDate(closedStart) + '–' + fmtShortDate(closedEnd);
+      return 'Office closed the week of ' + range + (sw.reason ? ' (' + sw.reason + ')' : '') + ' — no visits that week; all visit dates after it have been shifted out accordingly.';
+    });
+  }
+
+  // ---- printed patient plan (mirrors the office's paper form) ----
+  function renderPrintView(plan) {
+    var pv = $('printView');
+    if (!plan || !plan.totalVisits) { pv.innerHTML = ''; return; }
+
+    var name = $('patientName').value.trim();
+    var startDateStr = $('startDate').value;
+    var skipList = parseSkipWeeks();
+    var practiceName = $('practiceName').value.trim() || 'Burke Larsen, DC';
+    var practicePhone = $('practicePhone').value.trim();
+    var insurancePlanName = $('insurancePlanName').value.trim();
+
+    var boltByMonth = {};
+    plan.boltMonths.forEach(function(m) { boltByMonth[m.monthIdx] = m; });
+
+    var rows = plan.coreMonths.map(function(cm) {
+      var bm = boltByMonth[cm.monthIdx];
+      var services = [];
+      if (cm.adjCount) services.push(cm.adjCount + ' Adjustment' + (cm.adjCount === 1 ? '' : 's'));
+      if (cm.reExamCount) services.push(cm.reExamCount + ' Re-Eval' + (cm.reExamCount === 1 ? '' : 's'));
+      if (cm.xrayCount) services.push(cm.xrayCount + ' Re-X-Ray' + (cm.xrayCount === 1 ? '' : 's'));
+      if (cm.txPhaseCount) services.push(cm.txPhaseCount + ' TX Chair');
+      if (bm) {
+        BOLT_ON_CATALOG.forEach(function(c) {
+          if (bm.counts[c.key]) services.push(bm.counts[c.key] + ' ' + c.label);
+        });
+      }
+      var fullCost = cm.subtotal + (bm ? bm.subtotal : 0);
+      var savings = (cm.insuranceSavings + cm.selfPaySavings) + (bm ? (bm.insuranceSavings + bm.selfPaySavings) : 0);
+      var total = cm.total + (bm ? bm.total : 0);
+      return {
+        dateRange: calendarRangeForWeeks(cm.weekStart, cm.weekEnd, startDateStr, skipList),
+        services: services, fullCost: fullCost, savings: savings, total: total
+      };
+    });
+
+    var totals = rows.reduce(function(acc, r) {
+      acc.fullCost += r.fullCost; acc.savings += r.savings; acc.total += r.total; return acc;
+    }, { fullCost: 0, savings: 0, total: 0 });
+
+    var totalInsuranceSavings = plan.coreGrand.insuranceSavings + plan.boltGrand.insuranceSavings;
+    var savingsOpt = SAVINGS_OPTIONS.filter(function(o) { return o.key === state.savingsKey; })[0] || SAVINGS_OPTIONS[0];
+    var box = function(checked) { return checked ? '☑' : '☐'; };
+
+    var anyXray = plan.xrayVisitNums.length > 0;
+    var txActive = state.txPhase.phases.some(function(p) { return p.active; });
+    var boltActive = state.boltOns.some(function(b) { return b.active; });
+
+    var freqRows = state.phases.map(function(p) {
+      var label = p.freq >= 5 ? 'Daily' : (p.freq + 'x/week');
+      return '<div>' + label + ' for ' + p.weeks + ' weeks — ' + (p.freq * p.weeks) + ' adjustments</div>';
+    }).join('');
+
+    var html = '';
+    html += '<div class="pv-page">';
+
+    html += '<div class="pv-header">';
+    html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-brand">Lifetime Family Wellness</span></div>';
+    html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
+    html += '</div>';
+
+    html += '<div class="pv-title">Recommendations for Initial Intensive Care</div>';
+    html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
+    html += '<div class="pv-disclaimer">Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.</div>';
+
+    html += '<div class="pv-summary-box">';
+    html += '<div class="col"><h4>Initial Care Timeframe</h4>' + freqRows + '</div>';
+    html += '<div class="col"><h4>Intensity</h4>' +
+      '<div>' + box(true) + ' Re-Evals &amp; Progress Reports: ' + plan.reExamVisitNums.length + '</div>' +
+      '<div>' + box(anyXray) + ' Re-X-Rays' + (anyXray ? ' at visit #' + plan.xrayVisitNums.join(', ') : '') + '</div>' +
+      '<div>' + box(txActive) + ' Traction (TX Chair)</div>' +
+      '<div>' + box(boltActive) + ' Other Services (see attached)</div>' +
+      '</div>';
+    html += '<div class="col"><h4>Estimated Finances</h4>' +
+      '<div><b>' + money(plan.combinedGrandTotal) + '</b> total estimated cost to you</div>' +
+      '<h4 style="margin-top:6px;">Estimated Savings</h4>' +
+      '<div>' + box(totalInsuranceSavings > 0) + ' Insurance Contribution: ' + money(totalInsuranceSavings) + '</div>' +
+      '<div>' + box(state.savingsKey === 'admin') + ' Administrative Savings</div>' +
+      '<div>' + box(state.savingsKey === '2nd' || state.savingsKey === '3rd' || state.savingsKey === '4th') + ' Family Tiered Savings</div>' +
+      '<div>' + box(state.savingsKey === 'military') + ' Military Savings</div>' +
+      (state.savingsKey === 'carecredit' ? '<div>' + box(true) + ' Care Credit Savings</div>' : '') +
+      '</div>';
+    html += '</div>';
+
+    html += '<div class="pv-summary-box" style="grid-template-columns:1fr 1fr;">';
+    html += '<div class="col"><h4>Insurance</h4>' +
+      (plan.hasInsurance
+        ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + '</div>' +
+          '<div>Deductible remaining at start: ' + money(numVal('deductibleRemaining')) + '</div>' +
+          '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>'
+        : '<div>Self-pay — no insurance billed on this plan</div>') +
+      '</div>';
+    html += '<div class="col"><h4>Savings Program</h4><div>' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '</div></div>';
+    html += '</div>';
+
+    html += '<div class="pv-features"><b>Features and Benefits of Initial Intensive Care:</b>' +
+      '<ol>' +
+      '<li>Each Chiropractic Adjustment builds on the previous, and each visit builds toward a healthier, better aligned and more ideally functioning spinal column.</li>' +
+      '<li>Wellness Workshops are in place to further how much you get out of your care and build a foundation on which wiser health care decisions can be pursued.</li>' +
+      '<li>Home and in-office cervical traction, stretches, postural exercises are added as care progresses. The more engagement there is at home, the faster results can potentially be achieved.</li>' +
+      '<li>Progress Evaluations are done approximately every 8-10 visits to measure ongoing results, and future care may be adjusted based on outcomes.</li>' +
+      '</ol></div>';
+
+    html += '<table class="pv-table"><thead><tr><th>Duration</th><th>Chiropractic Services</th><th class="num">Full Estimated Cost</th><th class="num">Ins / Other Savings</th><th class="num">Estimated Total</th></tr></thead><tbody>';
+    rows.forEach(function(r) {
+      html += '<tr><td>' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + '</td>' +
+        '<td class="num">' + money(r.fullCost) + '</td><td class="num">' + (r.savings > 0 ? '−' + money(r.savings) : money(0)) + '</td>' +
+        '<td class="num">' + money(r.total) + '</td></tr>';
+    });
+    html += '</tbody><tfoot><tr><td colspan="2">Estimated Totals</td><td class="num">' + money(totals.fullCost) + '</td><td class="num">' + (totals.savings > 0 ? '−' + money(totals.savings) : money(0)) + '</td><td class="num">' + money(totals.total) + '</td></tr></tfoot></table>';
+
+    var skipNotes = skippedWeekNotes(startDateStr);
+    if (skipNotes.length) {
+      html += '<div class="pv-footnote">' + skipNotes.map(escapeHtml).join('<br>') +
+        '<br>The total amount of recommended care above is unchanged — the same number of visits, re-evals, and x-rays still happen; only the calendar dates shift to account for the closure(s) noted.</div>';
+    }
+
+    html += '<div class="pv-footnote">This is purely an estimation for care and timeframe. This is subject to updates based on your rate of progress and participation in homework. Re-evaluations are marking points for updates in care only if applicable.</div>';
+
+    html += '<div class="pv-signed-row"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+
+    html += '</div>'; // .pv-page
+
+    if (PAGE2_DATA_URI) {
+      html += '<div class="pv-page"><img class="pv-page2-img" src="' + PAGE2_DATA_URI + '"></div>';
+    }
+
+    pv.innerHTML = html;
+  }
+
+  var lastPlan = null;
+  function recalc() { lastPlan = computePlan(); render(lastPlan); renderPrintView(lastPlan); }
+
+  ['patientName', 'startDate', 'practiceName', 'practicePhone', 'insurancePlanName',
    'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
    'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore']
     .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
 
   $('newPatientBtn').addEventListener('click', function() {
-    state.phases = [{ freq: 3, weeks: 4, reExamInterval: 9, xrayAtEnd: false, xrayAreas: 2 }];
+    state.phases = [{ freq: 3, weeks: 4, reExamInterval: 9 }];
+    state.xrayPlan = freshXrayPlan();
+    state.skipWeeks = [];
     state.savingsKey = 'none';
     state.boltOns = freshBoltOns();
     state.txPhase = freshTxPhase();
     $('patientName').value = ''; $('startDate').value = '';
+    $('insurancePlanName').value = '';
     $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
     $('coinsurancePct').value = 0; $('copayGeneral').value = 0; $('copayXray').value = '';
     $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = '';
     $('billFullIfZeroCore').checked = false;
     $('feeAdjAllowed').value = 0; $('feeReExamAllowed').value = 0; $('feeXrayAllowedPerArea').value = 0;
-    renderPhases(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
+    renderPhases(); renderXrayPlan(); renderSkipWeeks(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
   });
 
   $('printBtn').addEventListener('click', function() { window.print(); });
@@ -894,7 +1214,7 @@
     document.body.removeChild(ta);
   }
 
-  renderPhases(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
+  renderPhases(); renderXrayPlan(); renderSkipWeeks(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
 })();
 </script>
 
