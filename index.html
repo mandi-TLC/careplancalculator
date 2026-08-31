@@ -81,7 +81,7 @@
   }
 
   /* ---- printed patient plan (mirrors the office's paper form) ---- */
-  .pv-page { font-family: 'Franklin Gothic Medium Cond', 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; color: #111; font-size: 11px; page-break-after: always; }
+  .pv-page { font-family: 'Franklin Gothic Medium Cond', 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; color: #111; font-size: 11px; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pv-page:last-child { page-break-after: auto; }
   .pv-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 8px; }
   .pv-header-left { display: flex; align-items: center; gap: 12px; }
@@ -91,6 +91,7 @@
   .pv-patient-row { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid #999; padding-bottom: 4px; margin-bottom: 4px; }
   .pv-patient-row > div { flex: 1; display: flex; }
   .pv-fill { flex: 1; border-bottom: 1px solid #999; padding: 0 4px; margin-left: 4px; }
+  .pv-name-fill { font-size: 14px; font-weight: 700; }
   .pv-disclaimer { color: #333; margin-bottom: 8px; line-height: 1.35; }
   .pv-summary-box { border: 1px solid #111; padding: 6px 8px; margin-bottom: 8px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
   .pv-summary-box h4 { margin: 0 0 3px; text-decoration: underline; }
@@ -109,6 +110,7 @@
   table.pv-table td.pv-dur-col, table.pv-table th.pv-dur-col { white-space: nowrap; width: 14%; }
   table.pv-table td.pv-money-col, table.pv-table th.pv-money-col { width: 13%; }
   table.pv-table td.pv-money-col { white-space: nowrap; }
+  table.pv-table tbody tr:nth-child(even) td { background: #eaf3fb; }
   table.pv-table tfoot td { font-weight: 700; background: #f2f1ec; }
   .pv-signed-row { display: flex; gap: 40px; margin-top: 16px; }
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
@@ -1468,7 +1470,7 @@
     html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Recommendations for Initial Intensive Care</span></div>';
     html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
     html += '</div>';
-    html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
+    html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill pv-name-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
     html += '<div class="pv-disclaimer">Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.</div>';
 
     html += '<div class="pv-summary-box">';
@@ -1563,7 +1565,7 @@
       html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Additional Services — Financials and Informed Consent</span></div>';
       html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
       html += '</div>';
-      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
+      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill pv-name-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
       html += '<div class="pv-disclaimer">Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.</div>';
 
       html += '<div class="pv-summary-box" style="grid-template-columns:1fr 1fr;">';
@@ -1584,17 +1586,21 @@
         BOLT_ON_CATALOG.forEach(function(c) {
           if (bm.counts[c.key]) services.push(bm.counts[c.key] + ' ' + c.label);
         });
+        // "total" here is the combined bolt-on + that same month's core chiropractic
+        // total (bm.combinedTotal, computed above alongside boltResult/coreResult) —
+        // this page's Estimated Total reflects everything due for that month, not
+        // just the add-on services in isolation.
         return {
           monthIdx: bm.monthIdx,
           dateRange: calendarRangeForWeeks(bm.weekStart, bm.weekEnd, startDateStr, skipList),
-          services: services, fullCost: bm.subtotal, insContribution: bm.insuranceSavings, savings: bm.selfPaySavings, total: bm.total
+          services: services, fullCost: bm.subtotal, insContribution: bm.insuranceSavings, savings: bm.selfPaySavings, total: bm.combinedTotal
         };
       });
       var boltTotals = boltRows.reduce(function(acc, r) {
         acc.fullCost += r.fullCost; acc.insContribution += r.insContribution; acc.savings += r.savings; acc.total += r.total; return acc;
       }, { fullCost: 0, insContribution: 0, savings: 0, total: 0 });
 
-      html += '<table class="pv-table"><thead><tr><th class="pv-num-col">#</th><th class="pv-dur-col">Duration</th><th>Additional Services</th><th class="num pv-money-col">Estimated Cost</th><th class="num pv-money-col">Ins / Other Savings</th><th class="num pv-money-col">Savings</th><th class="num pv-money-col">Estimated Total</th></tr></thead><tbody>';
+      html += '<table class="pv-table"><thead><tr><th class="pv-num-col">#</th><th class="pv-dur-col">Duration</th><th>Additional Services</th><th class="num pv-money-col">Estimated Cost</th><th class="num pv-money-col">Ins / Other Savings</th><th class="num pv-money-col">Savings</th><th class="num pv-money-col">Total Due (Incl. Chiropractic Care)</th></tr></thead><tbody>';
       boltRows.forEach(function(r) {
         html += '<tr><td class="pv-num-col">' + r.monthIdx + '</td><td class="pv-dur-col">' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + '</td>' +
           '<td class="num pv-money-col">' + money(r.fullCost) + '</td><td class="num pv-money-col">' + (r.insContribution > 0 ? '−' + money(r.insContribution) : money(0)) + '</td>' +
