@@ -677,9 +677,16 @@
       container.appendChild(row);
     });
     container.querySelectorAll('input[data-field=closureStart]').forEach(function(inp) {
-      inp.addEventListener('input', function() {
+      // 'change' (not 'input') fires once, only when a full date is actually
+      // committed — 'input' can fire repeatedly mid-selection on some date
+      // pickers, which was overwriting the auto-filled "through" date on
+      // every intermediate keystroke. We also update the sibling field's
+      // value directly instead of calling renderSkipWeeks(), since rebuilding
+      // the row's DOM while a native date picker is open force-closes it.
+      inp.addEventListener('change', function() {
         var idx = +inp.getAttribute('data-idx');
         state.skipWeeks[idx].closureStart = inp.value || null;
+        var endInp = container.querySelector('input[data-field=closureEnd][data-idx="' + idx + '"]');
         // never let "through" sit before "from" once both are set
         if (state.skipWeeks[idx].closureEnd && inp.value && state.skipWeeks[idx].closureEnd < inp.value) {
           state.skipWeeks[idx].closureEnd = inp.value;
@@ -692,11 +699,12 @@
           var d = addDays(inp.value, 4);
           state.skipWeeks[idx].closureEnd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
-        renderSkipWeeks(); recalc();
+        if (endInp) endInp.value = state.skipWeeks[idx].closureEnd || '';
+        recalc();
       });
     });
     container.querySelectorAll('input[data-field=closureEnd]').forEach(function(inp) {
-      inp.addEventListener('input', function() {
+      inp.addEventListener('change', function() {
         state.skipWeeks[+inp.getAttribute('data-idx')].closureEnd = inp.value || null;
         recalc();
       });
