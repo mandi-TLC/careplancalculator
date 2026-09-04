@@ -183,10 +183,11 @@
       </div>
       <div class="row">
         <div><label>Max insurance-covered visits (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
+        <div><label>Out-of-pocket max remaining ($) — optional</label><input type="text" id="oopRemaining" placeholder="Blank = not tracked"></div>
       </div>
       <div class="checkbox-row"><input type="checkbox" id="deductibleAppliesToCopay"><label for="deductibleAppliesToCopay">Deductible also applies before the copay (always applies before coinsurance)</label></div>
       <div class="checkbox-row"><input type="checkbox" id="billFullIfZeroCore"><label for="billFullIfZeroCore">Bill full cash fee to patient when allowed amount is $0 (treat as not covered — unchecked means $0 allowed = patient owes $0)</label></div>
-      <div class="hint">Coinsurance % is what the PATIENT pays (insurance covers the rest). Deductible is one running balance shared across adjustments, re-exams, x-rays, TX Phase, and any insurance-billed bolt-ons. <strong>Priority alternates month by month: within each month, the core plan (adjustments/re-exams/x-rays/TX Phase) claims the deductible first, then that same month's bolt-ons draw on whatever's left, then the next month's core gets first crack at whatever remains, and so on.</strong> Once the visit cap is hit, adjustments, re-exams, AND x-rays all switch to self-pay together — insurance is treated as exhausted for the rest of the plan.</div>
+      <div class="hint">Coinsurance % is what the PATIENT pays (insurance covers the rest). Deductible is one running balance shared across adjustments, re-exams, x-rays, TX Phase, and any insurance-billed bolt-ons. <strong>Priority alternates month by month: within each month, the core plan (adjustments/re-exams/x-rays/TX Phase) claims the deductible first, then that same month's bolt-ons draw on whatever's left, then the next month's core gets first crack at whatever remains, and so on.</strong> Once the visit cap is hit, adjustments, re-exams, AND x-rays all switch to self-pay together — insurance is treated as exhausted for the rest of the plan. <strong>Out-of-pocket max remaining tracks everything the patient actually pays (deductible + copay/coinsurance, across core, TX Phase, and bolt-ons) against that dollar amount — once it's used up, every insurance-billed line switches to $0 patient responsibility for the rest of the plan.</strong> Leave it blank if you don't want to track this.</div>
     </div>
 
     <div class="card">
@@ -1058,6 +1059,9 @@
     var deductibleAppliesToCopay = $('deductibleAppliesToCopay').checked;
     var billFullIfZeroCore = $('billFullIfZeroCore').checked;
     var mainVisitCap = parseCap($('mainVisitCap').value);
+    var oopRemainingRaw = $('oopRemaining').value.trim();
+    var oopTracked = oopRemainingRaw !== '';
+    var runningOOP = oopTracked ? Math.max(0, parseFloat(oopRemainingRaw) || 0) : null;
     var feeAdjAllowed = numVal('feeAdjAllowed');
     var feeReExamAllowed = numVal('feeReExamAllowed');
     var feeXrayAllowedPerArea = numVal('feeXrayAllowedPerArea');
@@ -1073,19 +1077,37 @@
       // noExtraCharge: explicitly "$0 patient share beyond the deductible" — forces
       // coinsurance-mode-at-0%, ignoring whatever copay/coinsurance values were entered,
       // so the deductible portion still applies normally but nothing on top of it does.
-      var mode = noExtraCharge ? 'coinsurance' : (copayAmt > 0 ? 'copay' : (coinsPct > 0 ? 'coinsurance' : 'full'));
+      //
+      // Once we're in this function, insurance IS covering the line (allowed > 0 and
+      // hasInsurance is true) — a $0 copay with 0% coinsurance is a real, valid answer
+      // ("insurance covers this 100%"), not a signal that we don't know the split. So
+      // there's no separate "full" fallback mode: copay>0 bills that copay, otherwise
+      // it's coinsurance math, and 0% coinsurance correctly comes out to $0 owed beyond
+      // the deductible.
+      var mode = (!noExtraCharge && copayAmt > 0) ? 'copay' : 'coinsurance';
       var effectiveCoinsPct = noExtraCharge ? 0 : coinsPct;
-      if (mode === 'copay' && !deductibleAppliesToCopay) return copayAmt;
-      if (runningDeductible >= allowedAmount) { runningDeductible -= allowedAmount; return allowedAmount; }
+      var raw;
+      if (mode === 'copay' && !deductibleAppliesToCopay) raw = copayAmt;
+      else if (runningDeductible >= allowedAmount) { runningDeductible -= allowedAmount; raw = allowedAmount; }
       else if (runningDeductible > 0) {
         var remainder = allowedAmount - runningDeductible;
         var ded = runningDeductible;
         runningDeductible = 0;
-        var share = mode === 'coinsurance' ? remainder * (effectiveCoinsPct / 100) : (mode === 'copay' ? copayAmt : remainder);
-        return ded + share;
+        var share = mode === 'coinsurance' ? remainder * (effectiveCoinsPct / 100) : copayAmt;
+        raw = ded + share;
       } else {
-        return mode === 'coinsurance' ? allowedAmount * (effectiveCoinsPct / 100) : (mode === 'copay' ? copayAmt : allowedAmount);
+        raw = mode === 'coinsurance' ? allowedAmount * (effectiveCoinsPct / 100) : copayAmt;
       }
+      // Out-of-pocket max: once the patient's real-dollar running total (deductible +
+      // copay/coinsurance, shared across core/TX Phase/bolt-ons — same pool as the
+      // deductible above) reaches what's left of the OOP max, everything the patient
+      // would otherwise owe on this and every later line becomes $0; insurance
+      // absorbs the rest as additional savings.
+      if (runningOOP != null) {
+        if (raw >= runningOOP) { raw = runningOOP; runningOOP = 0; }
+        else { runningOOP -= raw; }
+      }
+      return raw;
     }
 
     function newCoreMonth(monthIdx, weekStart, weekEnd) {
@@ -1167,6 +1189,13 @@
         // line is always present, so its bucket determines the visit's classification.
         var visitBucket = null;
 
+        // The insurance visit cap counts VISITS ("adj + re-exam combined" — one visit,
+        // even when it carries both a re-exam and its adjustment line), not billing
+        // lines. So the cap is checked/consumed exactly once per visit, on whichever
+        // main line we hit first, and every other main line on that same visit follows
+        // that same insurance-vs-selfpay decision rather than re-checking the cap.
+        var visitCovered = hasInsurance && (mainVisitCap === null || mainInsuredCount < mainVisitCap);
+
         mainLines.forEach(function(type) {
           var cashFull, owed, bucket;
           if (type === 'adjustment' || type === 'reexam') {
@@ -1177,8 +1206,8 @@
             cashFull = (type === 'adjustment' ? CASH.adjustment : CASH.reexam) * units;
             var notCovered = billFullIfZeroCore && allowed <= 0;
             if (notCovered) { owed = cashFull; bucket = 'selfpay'; }
-            else if (hasInsurance && (mainVisitCap === null || mainInsuredCount < mainVisitCap)) {
-              mainInsuredCount++;
+            else if (visitCovered) {
+              if (visitBucket == null) mainInsuredCount++; // consume one cap slot, once, for the whole visit
               owed = chargeInsuranceLine(allowed, copayGeneral * units, coinsurancePct);
               bucket = 'insurance';
             } else { owed = cashFull; bucket = 'selfpay'; }
@@ -1189,7 +1218,7 @@
             var allowedX = feeXrayAllowedPerArea * areas;
             var notCoveredX = billFullIfZeroCore && allowedX <= 0;
             if (notCoveredX) { owed = cashFull; bucket = 'selfpay'; }
-            else if (hasInsurance && (mainVisitCap === null || mainInsuredCount < mainVisitCap)) {
+            else if (visitCovered) {
               owed = chargeInsuranceLine(allowedX, copayXray != null ? copayXray : copayGeneral, coinsurancePct);
               bucket = 'insurance';
             } else { owed = cashFull; bucket = 'selfpay'; }
@@ -1287,7 +1316,8 @@
       boltMonths: boltResult.list, boltGrand: boltResult.grand,
       combinedGrandTotal: combinedGrandTotal,
       discountPct: discountPct, hasInsurance: hasInsurance,
-      deductibleRemainingAfter: runningDeductible
+      deductibleRemainingAfter: runningDeductible,
+      oopTracked: oopTracked, oopRemainingAfter: runningOOP
     };
   }
 
@@ -1311,6 +1341,7 @@
     html += '</div>';
 
     if (plan.hasInsurance) html += '<p style="color:#666;font-size:12.5px;">Deductible remaining at end of plan: ' + money(plan.deductibleRemainingAfter) + '.</p>';
+    if (plan.hasInsurance && plan.oopTracked) html += '<p style="color:#666;font-size:12.5px;">Out-of-pocket max remaining at end of plan: ' + money(plan.oopRemainingAfter) + (plan.oopRemainingAfter <= 0 ? ' (met — remaining insurance-billed visits are $0 to the patient)' : '') + '.</p>';
     html += '<p style="color:#666;font-size:12.5px;">Re-exams (incl. anniversary) at visit #: ' + plan.reExamVisitNums.join(', ') + '</p>';
     if (plan.xrayVisitNums.length) html += '<p style="color:#666;font-size:12.5px;">X-rays at visit #: ' + plan.xrayVisitNums.join(', ') + '</p>';
     html += '<p style="color:#666;font-size:12.5px;">Visit ' + (plan.totalVisits - 1) + ' = anniversary exam. Visit ' + plan.totalVisits + ' = final report visit (adjustment included).</p>';
@@ -1547,7 +1578,8 @@
       (plan.hasInsurance
         ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') + '</div>' +
           '<div>Deductible remaining at start: ' + money(numVal('deductibleRemaining')) + '</div>' +
-          '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>'
+          '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>' +
+          (plan.oopTracked ? '<div>Out-of-pocket max remaining: ' + money(numVal('oopRemaining')) + '</div>' : '')
         : '<div>Self-pay — no insurance billed on this plan</div>') +
       '</div>';
     html += '<div class="col"><h4>Savings Program</h4><div>' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '</div></div>';
@@ -1674,7 +1706,7 @@
 
   ['patientName', 'startDate', 'practiceName', 'practicePhone', 'insurancePlanName',
    'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
-   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore']
+   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining']
     .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
 
   // Pregnancy phases are date-driven — recompute them whenever the plan start date
@@ -1707,7 +1739,7 @@
     $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
     $('coinsurancePct').value = 0; $('copayGeneral').value = 0; $('copayXray').value = '';
     $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = '';
-    $('billFullIfZeroCore').checked = false;
+    $('billFullIfZeroCore').checked = false; $('oopRemaining').value = '';
     $('feeAdjAllowed').value = 0; $('feeReExamAllowed').value = 0; $('feeXrayAllowedPerArea').value = 0;
     renderPresetTree(); renderPhases(); renderXrayPlan(); renderSkipWeeks(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
   });
