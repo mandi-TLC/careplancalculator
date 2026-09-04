@@ -67,6 +67,10 @@
   .insurance-sub { border-top: 1px dashed #ddd; margin-top: 8px; padding-top: 8px; }
   #printView { display: none; }
   @media print {
+    /* Chrome/Safari/Firefox all strip background colors by default when printing
+       or "Save as PDF" (to save ink) unless a page explicitly opts back in — this
+       is what was making the table header/footer shading disappear in print. */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
     body { background: #fff; padding: 0; }
     .no-print, #output { display: none !important; }
     #printView { display: block; }
