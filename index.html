@@ -94,7 +94,7 @@
   .pv-header-right { text-align: right; font-weight: 700; white-space: nowrap; }
   .pv-patient-row { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid #999; padding-bottom: 4px; margin-bottom: 4px; }
   .pv-patient-row > div { flex: 1; display: flex; }
-  .pv-fill { flex: 1; border-bottom: 1px solid #999; padding: 0 4px; margin-left: 4px; }
+  .pv-fill { flex: 1; border-bottom: 1px solid #999; padding: 0 4px; margin-left: 4px; font-size: 22px; line-height: 1.1; }
   .pv-disclaimer { color: #333; margin-bottom: 8px; line-height: 1.35; }
   .pv-summary-box { border: 1px solid #111; padding: 6px 8px; margin-bottom: 8px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
   .pv-summary-box h4 { margin: 0 0 3px; text-decoration: underline; }
@@ -120,6 +120,20 @@
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
   .pv-footnote { font-style: italic; color: #333; margin-top: 6px; }
   .pv-page2-img { width: 100%; display: block; }
+  .pv-pay-grid { display: flex; gap: 20px; margin-top: 14px; }
+  .pv-pay-block { flex: 1; }
+  .pv-pay-head { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; font-weight: 700; align-items: end; margin-bottom: 4px; }
+  .pv-pay-two { text-align: center; }
+  .pv-pay-row { display: grid; grid-template-columns: 1fr 1fr 24px 0.8fr 0.8fr; gap: 6px; align-items: end; height: 22px; }
+  .pv-pay-line { border-bottom: 1px solid #333; height: 100%; }
+  .pv-pay-or { text-align: center; }
+  .pv-consent { font-size: 12.5px; }
+  .pv-consent p { margin: 0 0 6px; line-height: 1.28; text-align: justify; }
+  .pv-consent ul { margin: 0 0 7px; padding-left: 18px; }
+  .pv-consent-h { display: flex; justify-content: space-between; margin: 8px 0 4px; }
+  .pv-ini { white-space: nowrap; }
+  .pv-consent-rule { border-top: 1px dashed #333; padding-top: 8px; margin-top: 10px; }
+  .pv-minor-line { border-bottom: 1px solid #333; height: 20px; width: 55%; }
 </style>
 </head>
 <body>
@@ -394,11 +408,13 @@
     }
   };
 
+  // Baby plan = the post-birth portion of the pregnancy plan: 2x/week x2wks, then
+  // 1x/week x6wks (10 visits), no exams along the way. The last visit is the
+  // anniversary exam (the plan's only exam, no x-ray), plus the auto-added report
+  // visit = 11 visits total.
   var BABY_PRESET_PLAN = preset([
-    { freq: 3, weeks: 2, reExamInterval: 0 },
-    { freq: 2, weeks: 2, reExamInterval: computeExamInterval(4) },
-    { freq: 1, weeks: 4, reExamInterval: 0 },
-    { freq: 1, weeks: 4, reExamInterval: computeExamInterval(4) }
+    { freq: 2, weeks: 2, reExamInterval: 0 },
+    { freq: 1, weeks: 6, reExamInterval: 0 }
   ], [], false, 0);
 
   // Pregnancy: 1x/week until end of 2nd trimester, then 2x/week until the due date,
@@ -446,7 +462,7 @@
     { key: '6mo', label: '6-Month' },
     { key: '9mo', label: '9-Month' },
     { key: '12mo', label: '12-Month' },
-    { key: BABY_KEY, label: 'Baby (3-Month)' },
+    { key: BABY_KEY, label: 'Baby (8 weeks)' },
     { key: PREGNANCY_KEY, label: 'Pregnancy' },
     { key: CUSTOM_KEY, label: 'Build my own' }
   ];
@@ -1624,9 +1640,30 @@
 
     html += '</div>'; // .pv-page
 
-    if (PAGE2_DATA_URI) {
-      html += '<div class="pv-page"><img class="pv-page2-img" src="' + PAGE2_DATA_URI + '"></div>';
-    }
+    // Backside of the core page: administrative savings guidelines + signature-on-file
+    // authorization, as live printed text (no embedded image).
+    var corePayBlock = function() {
+      var b = '<div class="pv-pay-block"><div class="pv-pay-head"><span>Month</span><span>Amount</span><span class="pv-pay-two">2 Payments per Month<br>______ &amp; ______</span></div>';
+      for (var i = 0; i < 6; i++) b += '<div class="pv-pay-row"><span class="pv-pay-line"></span><span class="pv-pay-line"></span><span class="pv-pay-or">-or-</span><span class="pv-pay-line"></span><span class="pv-pay-line"></span></div>';
+      return b + '</div>';
+    };
+    html += '<div class="pv-page pv-consent">';
+    html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Recommendations for Initial Intensive Care</span></div>';
+    html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
+    html += '<div class="pv-consent-h"><b style="font-size:15px;">Administrative Savings Guidelines:</b><span class="pv-ini">________ Initial</span></div>' +
+      '<ul><li>Patient is on a prescribed plan of care, and is in compliance with that plan.</li><li>Appointments for that plan of care are pre-scheduled.</li><li>Payment for services is linked to a credit card securely kept on file and debited automatically on the date(s) selected, in advance of services being rendered.</li></ul>' +
+      '<p>If fewer or more services that anticipated are used during given month, payment will be adjusted to reflect any difference at the next anticipated frequency change. In the unfortunate event that your care here is discontinued, all services rendered to you since your last full monthly payment will be calculated at this practice\'s standard billable amount (without administrative savings). If a credit is present, it will remain on the account for future care. If a refund is requested instead, it will be issued within 30 days. If a balance is due, that amount will be charged to the card on file on the next monthly due date indicated below.</p>' +
+      '<div class="pv-consent-h"><b style="font-size:15px;">Signature on File Authorization:</b></div>' +
+      '<p>I, ______________________________, hereby authorize Lifetime Family Wellness to automatically initiate payment to my debit or credit card monthly (or twice monthly if selected) for services and/or products scheduled to be rendered to myself or my family member. I agree that my card will be charged on the ______ day of each month -or- (1<sup>st</sup> and 15<sup>th</sup>) -or- ( _____ and _____ ) for the amounts listed below.</p>' +
+      '<p>I certify that I am an authorized user of this card and will not dispute these transactions with my bank/credit card company, so long as the transactions correspond to the terms indicated in this authorization form. I understand that these amounts are estimated and if fewer or more services are used in any given month, the amount charged the following month will be adjusted to reflect that difference. I understand that I will not be notified of this change prior to the charge happening unless the amount to be charged for that month exceeds the amount listed below by more than $50. I also understand that if I need to change or cancel this automatic draft, I must notify the office in writing 5 business days in advance of the selected date or my card may still be charged. Notice to change or cancel this authorization can be given in person or by mailing to: Lifetime Family Wellness, 5089 Adams Ave, Ogden, UT 84403 or faxing to (866) 479-1660.</p>' +
+      '<div style="display:grid;grid-template-columns:auto auto auto auto 1fr;gap:6px 18px;margin:12px 0;align-items:end;">' +
+        '<span>☐ Visa</span><span>☐ MasterCard</span><span>☐ Discover</span><span>☐ AmEx</span><span>Last 4 Digits of Card: ________</span>' +
+        '<span style="grid-column:1/3;">Expiration Date: ____ / ____</span><span style="grid-column:3/5;">Security Code: ________</span><span>Billing Zip Code: ________</span>' +
+        '<span style="grid-column:1/6;">Card Holder\'s Name: ________________________________________________</span>' +
+      '</div>';
+    html += '<div class="pv-pay-grid">' + corePayBlock() + corePayBlock() + '</div>';
+    html += '<div class="pv-signed-row" style="margin-top:30px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+    html += '</div>'; // .pv-page
 
     // ---- Additional Services page (bolt-ons only) — its own sheet, mirroring the
     // office's real "Additional Services – Financials and Informed Consent" form.
@@ -1695,13 +1732,38 @@
 
       html += '<div class="pv-footnote" style="font-style:normal;font-weight:700;margin-top:10px;">Estimated Cost of Entire Recommended Care Plan, including Chiropractic Care and the above-described Additional Services: ' + money(plan.combinedGrandTotal) + '</div>';
 
-      html += '<div class="pv-signed-row"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+      // Manual payment schedule grid (two side-by-side blocks, filled in by hand)
+      function payBlock() {
+        var b = '<div class="pv-pay-block"><div class="pv-pay-head"><span>Month</span><span>Amount</span><span class="pv-pay-two">2 Payments per Month<br>______ &amp; ______</span></div>';
+        for (var i = 0; i < 6; i++) b += '<div class="pv-pay-row"><span class="pv-pay-line"></span><span class="pv-pay-line"></span><span class="pv-pay-or">-or-</span><span class="pv-pay-line"></span><span class="pv-pay-line"></span></div>';
+        return b + '</div>';
+      }
+      html += '<div class="pv-pay-grid">' + payBlock() + payBlock() + '</div>';
+
+      html += '<div class="pv-signed-row" style="margin-top:35px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
 
       html += '</div>'; // .pv-page
 
-      if (ADDL_SERVICES_PAGE2_DATA_URI) {
-        html += '<div class="pv-page"><img class="pv-page2-img" src="' + ADDL_SERVICES_PAGE2_DATA_URI + '"></div>';
-      }
+      // Backside: informed consent for the additional services (printed text)
+      var ini = '<span class="pv-ini">________ INITIALS</span>';
+      html += '<div class="pv-page pv-consent">';
+      html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Additional Services — Financials and Informed Consent</span></div>';
+      html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
+      html += '<div class="pv-consent-h"><b>NON-SURGICAL SPINAL DECOMPRESSION INFORMED CONSENT</b>' + ini + '</div>' +
+        '<p>I consent to allow Lifetime Family Wellness to perform a series of non-surgical spinal decompression treatments using the KDT Automatic Traction System Decompression Table. I understand that non-surgical spinal decompression is a non-invasive therapy where I will be tethered to a machine designed to create targeted negative pressure at specific levels within my back and spine. Additionally, due to the nature of my spine being within my body the negative pressure will be created within adjacent structures and tissues.</p>' +
+        '<p>I understand that non-invasive spinal decompression is contraindicated with the following conditions, and I will communicate to my provider if I have any of them: Pregnancy, spinal Infection or inflammation (meningitis, arachnoiditis, etc.), or spinal cancer; severe spinal injury (cauda equina syndrome); Rheumatoid Arthritis; spinal, rib, or pelvic fracture; osteoporosis; abdominal disease (hemorrhoids, aortic aneurysm); uncontrolled hypertension; acute respiratory disease, and joint hypermobility.</p>' +
+        '<p>I understand that I may refuse spinal decompression. I have the right to discuss any treatment with my provider. I am encouraged to ask questions about my concerns. I also understand that it is important to communicate with the personnel at Lifetime Family Wellness if something doesn\'t feel correct to me during spinal decompression therapy.</p>' +
+        '<p>I understand that non-invasive spinal decompression is not intended to be performed as a stand-alone procedure for my complaints/disease process. It is intended to be part of a comprehensive treatment program that may also involve pre and post decompression therapies, chiropractic adjustments, home exercises including core strengthening components, posture modification, and lifestyle modifications, which may include dietary modification, activities of daily living modification, nutritional support, and elimination of other factors that may be contributing to the problems for which I am being treated.</p>';
+      html += '<div class="pv-consent-h"><b>LASER THERAPY INFORMED CONSENT</b>' + ini + '</div>' +
+        '<p>I consent to allow Lifetime Family Wellness to perform a series of laser therapy treatments using the K-Laser defocused surgical red laser. Laser Therapy has been FDA approved for the temporary relief of pain and reduction of symptoms associated with mild arthritis and muscle pain. Laser has also been clinically shown to promote relaxation of muscle spasm and vasodilatation. Laser therapy needs to be performed on bare skin. It is the responsibility of the patient to communicate concerns regarding the treatment area. Gowns or drapes are available for patients to use. Adverse effects from the laser therapy are rare and temporary. Pain relief from laser therapy may be dramatic and substantial, lasting for hours, days or weeks. However, your results may be minimal or insignificant. Adverse effects of laser therapy may occur from multiple causes including hypersensitivity, preexisting health conditions, thermal effects, excessive pressure from the probe and laser over-stimulation.</p>' +
+        '<p>The most common adverse effects are:</p><ul><li>Temporary increase in pain during application of laser</li><li>Temporary increase in pain the following day after laser therapy</li><li>Mild bruising from the vasodilatation or direct pressure of the laser tip</li><li>Temporary dizziness</li><li>Skin reactions when photosensitizing drugs are used with laser therapy.</li></ul>' +
+        '<p>I understand the risks of laser therapy and agree to the treatment program outlined by my doctor. I acknowledge that that treatment may be performed by Dr. Burke or any member of the Lifetime Family Wellness Chiropractic and Nutrition staff. I also understand that the FDA only approves laser treatment for pain and inflammation. I agree to be treated, if necessary, under experimental condition for conditions other than pain and inflammation.</p>';
+      html += '<div class="pv-consent-h"><b>ACUPUNCTURE THERAPY INFORMED CONSENT</b>' + ini + '</div>' +
+        '<p>I hereby request and consent to the performance of acupuncture treatments. I have been informed that acupuncture may have side effects, including but not limited to bruising, numbness or tingling near the needling sites that may last a few days, with possible dizziness or fainting. I understand that the risk of infection is negligible when all needles are sterile. I will notify the doctor or team if I am or become pregnant.</p>';
+      html += '<p class="pv-consent-rule">I have read the above consents and agree to proceed with the recommended treatments for myself or for my dependent(s). I intend this consent form to cover the entire course of treatment for my present condition and for any future condition(s) for which I seek treatment.</p>';
+      html += '<div class="pv-signed-row" style="margin-top:40px;"><div class="pv-line" style="flex:2;">Patient Name</div><div class="pv-line" style="flex:2;">Signature (or Parent/Guardian)</div><div class="pv-line" style="flex:1;">Date</div></div>';
+      html += '<div style="margin-top:12px;">Name(s) of Minor Patient(s) in Household:</div><div class="pv-minor-line"></div><div class="pv-minor-line"></div>';
+      html += '</div>'; // .pv-page
     }
 
     pv.innerHTML = html;
