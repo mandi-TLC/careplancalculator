@@ -1492,7 +1492,12 @@
       var closedEnd = addDays(startDateStr, 7 * baseIdx + 7 * n - 1);
       var range = fmtShortDate(closedStart) + '–' + fmtShortDate(closedEnd);
       var weekWord = n > 1 ? (n + ' weeks') : 'the week';
-      return 'Office closed ' + weekWord + ' of ' + range + (sw.reason ? ' (' + sw.reason + ')' : '') + ' — no visits then; all visit dates after have been shifted out accordingly.';
+      if (sw.autoPregnancy) {
+        // The post-birth recovery break is not an office closure — it's a flexible
+        // window for mom, so it gets its own wording.
+        return { pregnancy: true, text: 'We are happy to adjust mom again as soon as she is comfortable doing so following birth. We have built in a maximum break of ' + (n > 1 ? n + ' weeks' : 'one week') + ' (' + range + ') to accommodate that, but should mom decide to return to care before the end of that break, she is welcome to. The dates of the remaining weeks of care will be adjusted accordingly, but the cost of that care will not change unless mom requests additional visits during that time.' };
+      }
+      return { pregnancy: false, text: 'Office closed ' + weekWord + ' of ' + range + (sw.reason ? ' (' + sw.reason + ')' : '') + ' — no visits then; all visit dates after have been shifted out accordingly.' };
     });
   }
   // On-screen (not print-only) week-number-to-calendar-date reference, so you
@@ -1625,8 +1630,13 @@
     html += '</tbody><tfoot><tr><td colspan="3">Estimated Totals</td><td class="num pv-money-col">' + money(totals.fullCost) + '</td><td class="num pv-money-col">' + (totals.insContribution > 0 ? '−' + money(totals.insContribution) : money(0)) + '</td><td class="num pv-money-col">' + (totals.savings > 0 ? '−' + money(totals.savings) : money(0)) + '</td><td class="num pv-money-col">' + money(totals.total) + '</td></tr></tfoot></table>';
 
     var skipNotes = skippedWeekNotes(startDateStr);
-    if (skipNotes.length) {
-      html += '<div class="pv-footnote">' + skipNotes.map(escapeHtml).join('<br>') +
+    var pregNotes = skipNotes.filter(function(n) { return n.pregnancy; });
+    var closureNotes = skipNotes.filter(function(n) { return !n.pregnancy; });
+    if (pregNotes.length) {
+      html += '<div class="pv-footnote">' + pregNotes.map(function(n) { return escapeHtml(n.text); }).join('<br>') + '</div>';
+    }
+    if (closureNotes.length) {
+      html += '<div class="pv-footnote">' + closureNotes.map(function(n) { return escapeHtml(n.text); }).join('<br>') +
         '<br>The total amount of recommended care above is unchanged — the same number of visits, re-evals, and x-rays still happen; only the calendar dates shift to account for the closure(s) noted.</div>';
     }
 
