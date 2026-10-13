@@ -432,11 +432,60 @@
       phase2Weeks = Math.max(0, Math.round((due.getTime() - phase2Start.getTime()) / msWeek));
     }
     var phases = [];
-    if (phase1Weeks > 0) phases.push(tier(1, phase1Weeks));
+    // Exams for pregnancy are spaced as evenly as possible at ~8-10 visits apart
+    // (the plan's lengths vary with the due date, so the usual "divide by 8, 9 or 10"
+    // rule often has no clean answer). One exam always lands on the last visit of the
+    // 1x/week phase (right before the frequency increases), and the free post-baby
+    // exam is the "returning to care" exam, so the pre-birth exams are spread so the
+    // gap running up to that free exam is also ~8-10 visits.
+    var EXTRA_LATE_VISITS = 2;
+    // Ideal gap between exams is 8-10 visits; for pregnancy it can stretch up to 13
+    // when that's the only way to avoid bunching exams closer than 8 apart. Picks the
+    // number of equal segments whose gap is closest to that window.
+    function gapCost(g) {
+      if (g < 8) return 8 - g;
+      if (g <= 10) return 0;
+      if (g <= 13) return (g - 10) * 0.3;
+      return (g - 10) * 3;
+    }
+    function bestSegments(span) {
+      var best = 1, bestCost = Infinity;
+      for (var s = 1; s <= Math.max(1, Math.ceil(span / 6)); s++) {
+        var c = gapCost(span / s);
+        if (c < bestCost - 1e-9) { bestCost = c; best = s; }
+      }
+      return best;
+    }
+    // If the 1x/week phase is long enough (8+ visits) it gets its own exam(s), ending
+    // with one on its last visit (right before the frequency increases). If it's
+    // shorter than that, an exam that soon after the initial exam would be too early,
+    // so it is skipped and the exam count starts over at the first 2x/week visit.
+    var n1 = phase1Weeks;                         // 1x/week => 1 visit per week
+    var phase1HasExam = n1 >= 8;
+    if (phase1Weeks > 0) {
+      var at1 = [];
+      if (phase1HasExam) {
+        var k1 = bestSegments(n1);
+        for (var j1 = 1; j1 <= k1; j1++) at1.push(Math.round(j1 * n1 / k1));
+      }
+      phases.push({ freq: 1, weeks: phase1Weeks, reExamInterval: 0, examAt: at1 });
+    }
     // +2 visits (one extra week's worth) in the final month before the due date, so
     // mom can keep being adjusted if baby comes late without it affecting cost. If
     // she delivers on time, her next payment after the birth is adjusted down.
-    if (phase2Weeks > 0) phases.push(Object.assign(tier(2, phase2Weeks), { extraEndVisits: 2 }));
+    if (phase2Weeks > 0) {
+      var n2 = phase2Weeks * 2;
+      var offset2 = 0;                             // count restarts at the first 2x/week visit
+      var span2 = offset2 + n2 + EXTRA_LATE_VISITS; // visits from the last exam to the free post-baby exam
+      var k2 = bestSegments(span2) - 1;
+      var at2 = [];
+      for (var j2 = 1; j2 <= k2; j2++) {
+        var pos = Math.round(j2 * span2 / (k2 + 1)) - offset2;
+        pos = Math.min(n2, pos);
+        if (pos >= 1 && at2.indexOf(pos) < 0) at2.push(pos);
+      }
+      phases.push({ freq: 2, weeks: phase2Weeks, reExamInterval: 0, examAt: at2, extraEndVisits: EXTRA_LATE_VISITS });
+    }
     phases.push({ freq: 2, weeks: 2, reExamInterval: 0, freeEventBefore: true, freeEventAreas: 2 });
     phases.push({ freq: 1, weeks: 6, reExamInterval: 0 });
     return {
@@ -1003,7 +1052,8 @@
           for (var v = 1; v <= freq; v++) {
             visitNum++;
             phaseLocalVisit++;
-            var isReExamHere = interval > 0 && (phaseLocalVisit % interval === 0);
+            var isReExamHere = (interval > 0 && (phaseLocalVisit % interval === 0)) ||
+              (phase.examAt && phase.examAt.indexOf(phaseLocalVisit) >= 0);
             var visitObj = {
               visitNum: visitNum, week: week, monthIdx: Math.ceil(week / 4),
               isReExam: isReExamHere, isXray: false, xrayAreas: 0,
