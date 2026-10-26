@@ -92,9 +92,9 @@
   .pv-logo { max-height: 60px; max-width: 100px; }
   .pv-title { font-size: 14px; font-weight: 700; text-transform: uppercase; }
   .pv-header-right { text-align: right; font-weight: 700; white-space: nowrap; }
-  .pv-patient-row { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid #999; padding-bottom: 4px; margin-bottom: 4px; }
+  .pv-patient-row { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 4px; margin-bottom: 4px; }
   .pv-patient-row > div { flex: 1; display: flex; }
-  .pv-fill { flex: 1; border-bottom: 1px solid #999; padding: 0 4px; margin-left: 4px; font-size: 22px; line-height: 1.1; }
+  .pv-fill { flex: 1; padding: 0 4px; margin-left: 4px; font-size: 22px; line-height: 1.1; }
   .pv-disclaimer { color: #333; margin-bottom: 5px; line-height: 1.3; }
   .pv-summary-box { border: 1px solid #111; padding: 5px 8px; margin-bottom: 5px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
   .pv-summary-box h4 { margin: 0 0 3px; text-decoration: underline; }
@@ -166,6 +166,8 @@
   /* Spreadsheet worksheet prints on its own landscape sheet */
   @page pvsheet { size: landscape; margin: 0.4in; }
   .pv-sheet { page: pvsheet; }
+  table.pv-mo-table { margin-top: 4px; }
+  table.pv-mo-table th, table.pv-mo-table td { padding: 2px 6px; }
   .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 1px 3px; }
   .pv-sheet-table td.ctr, .pv-sheet-table th.ctr { text-align: center; width: 3%; }
   .pv-sheet-table td.nw { white-space: nowrap; }
@@ -180,9 +182,9 @@
   .pv-sheet-table th:nth-child(3) { width: 19.5%; } .pv-sheet-table th:nth-child(4) { width: 6.5%; }
   .pv-sheet-table th:nth-child(5) { width: 7.5%; } .pv-sheet-table th:nth-child(6) { width: 5.5%; }
   .pv-sheet-table th:nth-child(7) { width: 6.5%; } .pv-sheet-table th:nth-child(8) { width: 6%; }
-  .pv-sheet-table th:nth-child(9) { width: 5.5%; } .pv-sheet-table th:nth-child(10) { width: 5.5%; }
+  .pv-sheet-table th:nth-child(9) { width: 6.5%; } .pv-sheet-table th:nth-child(10) { width: 5.5%; }
   .pv-sheet-table th:nth-child(11) { width: 5.5%; } .pv-sheet-table th:nth-child(12) { width: 6.5%; }
-  .pv-sheet-table th:nth-child(13) { width: 5.5%; } .pv-sheet-table th:nth-child(14) { width: 6.5%; }
+  .pv-sheet-table th:nth-child(13) { width: 5.5%; } .pv-sheet-table th:nth-child(14) { width: 5.5%; }
   /* each month is one boxed group of service lines; no zebra striping inside a group */
   table.pv-table.pv-sheet-table tbody tr:nth-child(odd), table.pv-table.pv-sheet-table tbody tr:nth-child(even) { background: #fff; }
   .pv-sheet-table tbody td { border-top: 1px dotted #aaa; border-bottom: 1px dotted #aaa; }
@@ -2207,6 +2209,29 @@
 
       html += '<div class="pv-footnote" style="font-style:normal;font-weight:700;margin-top:10px;">Estimated Cost of Entire Recommended Care Plan, including Chiropractic Care and the above-described Additional Services: ' + money(plan.combinedGrandTotal) + '</div>';
 
+      // Monthly patient-responsibility totals for the whole plan (core + additional services).
+      // Plans longer than 6 months use two side-by-side columns so it fits on the page.
+      (function() {
+        var byMo = {}, moInfo = {};
+        plan.coreMonths.forEach(function(m) { byMo[m.monthIdx] = (byMo[m.monthIdx] || 0) + m.total; moInfo[m.monthIdx] = m; });
+        plan.boltMonths.forEach(function(m) { byMo[m.monthIdx] = (byMo[m.monthIdx] || 0) + m.total; if (!moInfo[m.monthIdx]) moInfo[m.monthIdx] = m; });
+        var keys = Object.keys(byMo).map(Number).sort(function(a, b) { return a - b; });
+        if (!keys.length) return;
+        var rowsT = keys.map(function(k) {
+          var mm = moInfo[k];
+          return { label: (isPregPrint ? '' : 'Month ' + k + ' — ') + calendarRangeForWeeks(mm.weekStart, mm.weekEnd, startDateStr, skipList), amt: byMo[k] };
+        });
+        var two = rowsT.length > 6;
+        var half = two ? Math.ceil(rowsT.length / 2) : rowsT.length;
+        function tbl(list) {
+          var t = '<table class="pv-table pv-mo-table"><thead><tr><th>Month</th><th class="num">Monthly Total</th></tr></thead><tbody>';
+          list.forEach(function(r) { t += '<tr><td>' + escapeHtml(r.label) + '</td><td class="num pv-money-col">' + money(r.amt) + '</td></tr>'; });
+          return t + '</tbody></table>';
+        }
+        html += '<div class="pv-footnote" style="font-style:normal;font-weight:700;margin-top:8px;">Monthly totals for the entire plan of care (chiropractic care + additional services)</div>';
+        html += two ? '<div style="display:flex;gap:16px;">' + '<div style="flex:1;">' + tbl(rowsT.slice(0, half)) + '</div><div style="flex:1;">' + tbl(rowsT.slice(half)) + '</div></div>' : tbl(rowsT);
+      })();
+
       // Manual payment schedule grid (two side-by-side blocks, filled in by hand)
       function payBlock() {
         var b = '<div class="pv-pay-block"><div class="pv-pay-head"><span>Month</span><span>Amount</span><span class="pv-pay-two">2 Payments per Month<br>______ &amp; ______</span></div>';
@@ -2397,9 +2422,9 @@
             '<td>' + (lb ? escapeHtml(lb.label) : '') + '</td>' + cell(bfee, lb) +
             (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(aF + bF) + '</td>' : '') +
             cell((lc ? lc.sav : 0) + (lb ? lb.sav : 0), lc || lb) +
-            (r === 0 ? '<td class="num b" rowspan="' + n + '">' + zero(insC) + '</td>' : '') +
+            (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(owe) + '</td>' : '') +
             cell(lc ? lc.cop : 0, lc) + cell(lb ? lb.cop : 0, lb) + cell(lc ? lc.self : 0, lc) + cell(lb ? lb.self : 0, lb) +
-            (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(owe) + '</td>' : '') + '</tr>';
+            (r === 0 ? '<td class="num b" rowspan="' + n + '">' + zero(insC) + '</td>' : '') + '</tr>';
         }
       });
       var sheetNotes = [];
@@ -2416,8 +2441,8 @@
       html += '<div class="pv-page pv-sheet" style="font-size:' + sz + 'px;">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '" style="max-height:40px;">' : '') + '<span class="pv-title">Care Plan Worksheet — How the Numbers Are Figured</span></div>';
       html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
-      html += '<table class="pv-table pv-sheet-table' + (isPregPrint ? ' pv-sheet-nomo' : '') + '"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Bolt-On Services</th><th class="num">Bolt-On Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Ins Contrib</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Bolt-Ons</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Bolt-Ons</th><th class="num">Patient Owes</th></tr></thead><tbody>' + sheetRows +
-        '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.ins) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.owe) + '</td></tr></tfoot></table>';
+      html += '<table class="pv-table pv-sheet-table' + (isPregPrint ? ' pv-sheet-nomo' : '') + '"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Bolt-On Services</th><th class="num">Bolt-On Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Patient Owes</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Bolt-Ons</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Bolt-Ons</th><th class="num">Ins Contrib</th></tr></thead><tbody>' + sheetRows +
+        '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.owe) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.ins) + '</td></tr></tfoot></table>';
       html += '<div class="pv-footnote" style="font-style:normal;">Patient Owes = Co-pay Chiro + Co-pay Bolt-Ons + Self-pay Chiro + Self-pay Bolt-Ons = Total Fees − Ins Contrib − Savings Amt. ' + sheetNotes.map(escapeHtml).join(' ') + '</div>' +
         (examVisitText ? '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits:</b> ' + escapeHtml(examVisitText) + '</div>' : '');
       html += '</div>'; // .pv-page
