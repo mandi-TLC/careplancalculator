@@ -503,7 +503,8 @@
   // Pregnancy: 1x/week until end of 2nd trimester, then 2x/week until the due date,
   // skip 2 weeks, a fully-complimentary post-baby exam + x-ray, 2x/week x2wks,
   // 1x/week x6wks, then the anniversary exam (auto-added, like every other plan).
-  function buildPregnancyPreset(startDateStr, dueDateStr, manualExams) {
+  function buildPregnancyPreset(startDateStr, dueDateStr, closedWeeks) {
+    closedWeeks = closedWeeks || [];
     var msWeek = 7 * 24 * 60 * 60 * 1000;
     var start = startDateStr ? new Date(startDateStr + 'T00:00:00') : null;
     var due = dueDateStr ? new Date(dueDateStr + 'T00:00:00') : null;
@@ -556,7 +557,11 @@
       for (var d = 8; d <= 12; d++) if (span % d === 0) return span / d;
       return bestSegments(span);
     }
-    var n1 = phase1Weeks;                         // 1x/week => 1 visit per week
+    // Closed weeks before the birth remove their visits, so exam spacing is worked out on
+    // the visits that will actually happen in each phase.
+    var closed1 = closedWeeks.filter(function(w) { return w >= 1 && w <= phase1Weeks; }).length;
+    var closed2 = closedWeeks.filter(function(w) { return w > phase1Weeks && w <= phase1Weeks + phase2Weeks; }).length;
+    var n1 = Math.max(0, phase1Weeks - closed1); // 1x/week => 1 visit per week
     var phase1HasExam = n1 >= MIN_GAP;
     var at1 = [];
     if (phase1Weeks > 0) {
@@ -570,7 +575,7 @@
     // mom can keep being adjusted if baby comes late without it affecting cost. If
     // she delivers on time, her next payment after the birth is adjusted down.
     if (phase2Weeks > 0) {
-      var n2 = phase2Weeks * 2;
+      var n2 = Math.max(0, phase2Weeks - closed2) * 2;
       // 3rd-trimester rule: weeks x visits/week, minus the 9 planned visits of the final
       // month, then split what is left into the most even groups of 8-10 visits. No exam
       // in the final month; the count always starts at the first 2x/week visit.
@@ -681,20 +686,34 @@
 
   function applyPregnancyPreset() {
     var startDateStr = $('startDate').value;
-    var built = buildPregnancyPreset(startDateStr, state.dueDate);
-    applyPresetPlan(built.plan);
+    function build(closedWeeks) {
+      var b = buildPregnancyPreset(startDateStr, state.dueDate, closedWeeks);
+      applyPresetPlan(b.plan);
+      state.skipWeeks = state.skipWeeks.filter(function(sw) { return !sw.autoPregnancy; });
+      if (b.skipAfterWeek > 0) {
+        state.skipWeeks.unshift({
+          afterWeek: b.skipAfterWeek, weeksCount: 2,
+          reason: 'Due date — up to 2 weeks for mom\'s recovery after birth',
+          autoPregnancy: true
+        });
+      }
+      return b;
+    }
+    build([]);
+    // Office closures before the birth remove visits; rebuild so the automatic exam
+    // spacing uses the visits that will really happen.
+    if (startDateStr) {
+      var closedList = [];
+      resolvedSkipRows(startDateStr).forEach(function(c) {
+        if (!c.absorbed) return;
+        for (var cw = 1; cw <= c.r.weeksCount; cw++) closedList.push(c.r.afterWeek + cw);
+      });
+      if (closedList.length) build(closedList);
+    }
     // Exams the user picked by hand for a pre-birth phase survive date changes.
     state.phases.forEach(function(ph) {
       if (ph.role && state.pregExams && state.pregExams[ph.role]) ph.examAt = state.pregExams[ph.role].slice();
     });
-    state.skipWeeks = state.skipWeeks.filter(function(sw) { return !sw.autoPregnancy; });
-    if (built.skipAfterWeek > 0) {
-      state.skipWeeks.unshift({
-        afterWeek: built.skipAfterWeek, weeksCount: 2,
-        reason: 'Due date — up to 2 weeks for mom\'s recovery after birth',
-        autoPregnancy: true
-      });
-    }
   }
 
   function renderPresetTree() {
@@ -801,7 +820,7 @@
         examExtra = '<div class="row">' + exs.map(function(v, k) {
           return '<div><label>Exam ' + (k + 1) + ' after visit # (of this phase)</label><input type="number" min="1" step="1" value="' + v + '" data-pex="' + idx + '" data-k="' + k + '"></div>';
         }).join('') + '</div>' +
-          '<div class="hint">This phase has ' + visitsHere + ' visit' + (visitsHere === 1 ? '' : 's') + ' (' + (phase.weeks || 0) + ' weeks at ' + phase.freq + 'x/week' + (closedHere.length ? ', minus ' + closedHere.length + ' closed week' + (closedHere.length === 1 ? '' : 's') : '') + '). Count only the visits that actually happen; the late-baby extra visits are not counted.' +
+          '<div class="hint">This phase has ' + visitsHere + ' visit' + (visitsHere === 1 ? '' : 's') + ' (' + (phase.weeks || 0) + ((phase.weeks || 0) === 1 ? ' week at ' : ' weeks at ') + phase.freq + 'x/week' + (closedHere.length ? ', minus ' + closedHere.length + ' closed week' + (closedHere.length === 1 ? '' : 's') : '') + '). Count only the visits that actually happen; the late-baby extra visits are not counted.' +
           (closedHere.length ? ' <b>Office closed in this phase: week' + (closedHere.length === 1 ? ' ' : 's ') + closedHere.join(', ') + ' of the plan (' + (closedHere.length * phase.freq) + ' visit' + (closedHere.length * phase.freq === 1 ? '' : 's') + ' removed).</b>' : '') +
           (phase.role === 'pre2' ? (function() {
             var B = visitsHere - 9, tip = '';
