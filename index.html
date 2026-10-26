@@ -830,6 +830,9 @@
     var container = $('skipWeekRows');
     container.innerHTML = '';
     state.skipWeeks.forEach(function(sw, idx) {
+      // The pregnancy plan's built-in recovery break stays in the plan but is not shown
+      // here, so it can't be edited by accident; only real office closures are listed.
+      if (sw.autoPregnancy) return;
       var row = document.createElement('div');
       row.className = 'segment-row';
       row.innerHTML =
