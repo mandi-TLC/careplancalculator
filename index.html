@@ -1101,7 +1101,7 @@
       if (state.phases[pi0].freeEventBefore) { if (pi0 > 0) preBirthWeeks = preWeeks; break; }
       preWeeks += Math.max(0, state.phases[pi0].weeks || 0);
     }
-    if (preBirthWeeks > 0) { stubWeeks = preBirthWeeks % 4; mergeStub = stubWeeks > 0 && stubWeeks <= 2 && preBirthWeeks > 4; }
+    if (preBirthWeeks > 0) { stubWeeks = preBirthWeeks % 4; mergeStub = (stubWeeks === 1 && preBirthWeeks > 4); /* exactly 1 leftover period folds into the first month; 2-3 stay a short first month */ }
     function monthOf(w) {
       if (preBirthWeeks > 0) {
         if (w > preBirthWeeks) return monthOf(preBirthWeeks) + Math.ceil((w - preBirthWeeks) / 4);
@@ -1252,7 +1252,18 @@
       isAnniversary: false, isReport: true
     });
 
-    return { visits: visits, totalVisits: visitNum, totalWeeks: repWeek };
+    // Pregnancy: each month row spans its full 4-period block (counted back from the due
+    // date) even if some periods have no visit (office closures), so printed dates never skip.
+    var monthWeekRange = null;
+    if (preBirthWeeks > 0) {
+      monthWeekRange = {};
+      for (var mw = 1; mw <= week; mw++) {
+        var mk = monthOf(mw);
+        if (!monthWeekRange[mk]) monthWeekRange[mk] = { start: mw, end: mw };
+        else monthWeekRange[mk].end = mw;
+      }
+    }
+    return { visits: visits, totalVisits: visitNum, totalWeeks: repWeek, monthWeekRange: monthWeekRange };
   }
 
   // Bolt-on occurrences: for each frequency segment, take the first N visits
@@ -1409,6 +1420,8 @@
       var visitsHere = visitsByMonth[monthIdx] || [];
       var weekStart = visitsHere.length ? Math.min.apply(null, visitsHere.map(function(v) { return v.week; })) : (monthIdx - 1) * 4 + 1;
       var weekEnd = visitsHere.length ? Math.max.apply(null, visitsHere.map(function(v) { return v.week; })) : monthIdx * 4;
+      var mwr = built.monthWeekRange && built.monthWeekRange[monthIdx];
+      if (mwr) { weekStart = Math.min(weekStart, mwr.start); weekEnd = Math.max(weekEnd, mwr.end); }
       return { visitsHere: visitsHere, weekStart: weekStart, weekEnd: weekEnd };
     }
 
@@ -1478,7 +1491,11 @@
               }
               bucket = 'insurance';
             } else { owed = cashFull; bucket = 'selfpay'; }
-            if (type === 'adjustment') cm.adjCount++; else cm.reExamCount++;
+            if (type === 'adjustment') {
+              cm.adjCount++;
+              cm.adjPh = cm.adjPh || {};
+              cm.adjPh[v.phaseIdx || 0] = (cm.adjPh[v.phaseIdx || 0] || 0) + 1;
+            } else cm.reExamCount++;
           } else {
             var areas = v.xrayAreas || 0;
             cashFull = CASH.xrayPerArea * areas;
@@ -1494,7 +1511,7 @@
             } else { owed = cashFull; bucket = 'selfpay'; }
             cm.xrayCount++;
           }
-          applyLine(cm, cashFull, owed, bucket, type === 'adjustment' ? 'adj' : (type === 'reexam' ? (v.isAnniversary ? 'anniv' : 'reexam') : 'xray'));
+          applyLine(cm, cashFull, owed, bucket, type === 'adjustment' ? 'adj:' + (v.phaseIdx || 0) : (type === 'reexam' ? (v.isAnniversary ? 'anniv' : 'reexam') : 'xray'));
           if (type === 'adjustment') visitBucket = bucket;
         });
 
@@ -1744,6 +1761,9 @@
     items.forEach(function(it) {
       var absorbed = !!(preg && !it.sw.autoPregnancy && it.calWeek < preg.calWeek);
       var aw = it.direct ? it.sw.afterWeek : Math.max(0, it.calWeek - pushed - 1);
+      // Pregnancy, closure before the birth: the visit lost is the one in the 7-day period
+      // that contains the first closed day.
+      if (absorbed && !it.direct && it.sw.closureStart) aw = Math.max(0, weekIndexForDate(it.sw.closureStart, startDateStr) - 1);
       rows.push({ sw: it.sw, r: { afterWeek: aw, weeksCount: it.n }, absorbed: absorbed });
       if (!absorbed) pushed += it.n;
     });
@@ -1915,7 +1935,7 @@
       var cmHit = plan.coreMonths.filter(function(m) { return wk >= m.weekStart && wk <= m.weekEnd; })[0];
       if (!cmHit) return;
       var txt = p.freeEventBefore
-        ? '▶ Care resumes at ' + freqLabelOf(p) + ' (first visit includes exam + x-ray)'
+        ? '▶ Care resumes at ' + freqLabelOf(p)
         : '▶ Frequency change: ' + freqLabelOf(p) + ' begins';
       (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push(txt);
     });
@@ -2281,20 +2301,32 @@
       // chiropractic lines on the left and bolt-on lines beside them. Each month is boxed
       // together, and Patient Owes is a single total for the whole month.
       function sheetLine(m, kind, label) {
-        var fee = (m.kindCash || {})[kind] || 0, ins = (m.kindIns || {})[kind] || 0;
-        var cop = (m.kindCopay || {})[kind] || 0, self = (m.kindSelf || {})[kind] || 0;
+        var kinds = Array.isArray(kind) ? kind : [kind];
+        var sum = function(map) { return kinds.reduce(function(t, k) { return t + (((m[map] || {})[k]) || 0); }, 0); };
+        var fee = sum('kindCash'), ins = sum('kindIns'), cop = sum('kindCopay'), self = sum('kindSelf');
         return { label: label, fee: fee, ins: ins, cop: cop, self: self * (1 - dPct), sav: self * dPct };
       }
       idxList.forEach(function(mi) {
         var c = coreBy[mi], b = boltBy[mi];
         var L = [], B = [];
         if (c) {
-          if (c.adjCount) L.push(sheetLine(c, 'adj', c.adjCount + ' Adjustment' + (c.adjCount === 1 ? '' : 's') + ' (' + money(CASH.adjustment) + ' ea)'));
+          // Pregnancy months where the visit frequency changes: adjustments before the change,
+          // then any exam, then the adjustments at the new frequency, each on its own line.
+          var adjIdxs = Object.keys(c.adjPh || {}).map(Number).sort(function(a, b) { return a - b; });
+          var splitAdj = isPregPrint && adjIdxs.length > 1;
+          var adjLabel = function(n, pidx, withFreq) {
+            return n + ' Adjustment' + (n === 1 ? '' : 's') + (withFreq ? ' at ' + freqLabelOf(state.phases[pidx] || {}) : '') + ' (' + money(CASH.adjustment) + ' ea)';
+          };
+          if (c.adjCount && !splitAdj) L.push(sheetLine(c, adjIdxs.map(function(i) { return 'adj:' + i; }), adjLabel(c.adjCount, 0, false)));
+          if (splitAdj) L.push(sheetLine(c, 'adj:' + adjIdxs[0], adjLabel(c.adjPh[adjIdxs[0]], adjIdxs[0], true)));
           var regRe = c.reExamCount - (c.hasAnniversary ? 1 : 0) - (c.freeReExam || 0);
           if (regRe > 0) L.push(sheetLine(c, 'reexam', regRe + ' Re-Evaluation' + (regRe === 1 ? '' : 's') + ' (' + money(CASH.reexam) + ')'));
           if (c.hasAnniversary) L.push(sheetLine(c, 'anniv', 'Anniversary Eval (' + money(CASH.reexam) + ')'));
           var regX = c.xrayCount - (c.freeXray || 0);
           if (regX > 0) L.push(sheetLine(c, 'xray', regX + ' Re-X-Ray visit' + (regX === 1 ? '' : 's') + ' (' + money(CASH.xrayPerArea) + '/area)'));
+          if (splitAdj) {
+            for (var ai = 1; ai < adjIdxs.length; ai++) L.push(sheetLine(c, 'adj:' + adjIdxs[ai], adjLabel(c.adjPh[adjIdxs[ai]], adjIdxs[ai], true)));
+          }
           if (c.txPhaseCount) L.push(sheetLine(c, 'tx', c.txPhaseCount + ' TX Chair (' + money(CASH.txPhase) + ')'));
           if (c.freeReExam || c.freeXray) L.push(sheetLine(c, 'free', 'Post-baby exam + x-ray (Dr. Burke\'s expense)'));
         }
