@@ -122,6 +122,36 @@
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
   .pv-footnote { font-style: italic; color: #333; margin-top: 6px; }
   .pv-page2-img { width: 100%; display: block; }
+  /* Findings & Recommendations page: spread to fill the sheet, nothing on the back */
+  .pv-fr { height: 9.4in; display: flex; flex-direction: column; justify-content: space-between; font-size: 14px; page-break-inside: avoid; }
+  .pv-fr .pv-title { font-size: 20px; }
+  .pv-fr-sec { border-left: 5px solid #8a8a3c; padding-left: 14px; }
+  .pv-fr-h { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #2f4a2f; margin-bottom: 8px; }
+  .pv-fr-name { font-size: 28px; border-bottom: 1px solid #333; min-height: 36px; padding: 0 4px; }
+  .pv-fr-basis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; font-size: 15px; }
+  .pv-fr-big { font-size: 22px; font-weight: 700; color: #2f4a2f; }
+  .pv-fr-blank { display: inline-block; border-bottom: 1px solid #333; text-align: center; font-weight: 700; color: #111; }
+  .pv-fr-blank-s { min-width: 60px; }
+  .pv-fr-blank-m { min-width: 60px; }
+  .pv-fr-slot { font-size: 18px; margin-bottom: 10px; }
+  .pv-fr-note { font-size: 13px; font-style: italic; color: #333; margin-top: 8px; line-height: 1.4; }
+  .pv-fr-prog > div { display: flex; gap: 14px; margin-bottom: 14px; font-size: 14px; line-height: 1.4; }
+  .pv-fr-prog .n { font-size: 24px; font-weight: 700; color: #8a8a3c; min-width: 36px; }
+  .pv-fr-preg { font-size: 13px; }
+  .pv-fr-preg .pv-fr-basis { font-size: 14px; gap: 6px 20px; }
+  .pv-fr-preg .pv-fr-slot { font-size: 16px; margin-bottom: 6px; }
+  .pv-fr-preg .pv-fr-name { font-size: 26px; min-height: 32px; }
+  .pv-fr-preg .pv-fr-prog > div { margin-bottom: 8px; font-size: 13px; }
+  .pv-blank { height: 1px; overflow: hidden; color: #fff; font-size: 1px; }
+  /* Spreadsheet worksheet prints on its own landscape sheet */
+  @page pvsheet { size: landscape; margin: 0.4in; }
+  .pv-sheet { page: pvsheet; }
+  .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 2px 4px; }
+  .pv-sheet-table td.ctr, .pv-sheet-table th.ctr { text-align: center; width: 3%; }
+  .pv-sheet-table td.nw { white-space: nowrap; }
+  .pv-sheet-table td.b { font-weight: 700; }
+  .pv-sheet-table th:nth-child(3) { width: 21%; } .pv-sheet-table th:nth-child(5) { width: 11%; }
+  .pv-sheet-table th:nth-child(2) { width: 9%; }
   .pv-pay-grid { display: flex; gap: 20px; margin-top: 14px; }
   .pv-pay-block { flex: 1; }
   .pv-pay-head { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; font-weight: 700; align-items: end; margin-bottom: 4px; }
@@ -204,12 +234,15 @@
         <div><label>X-ray copay ($) — optional</label><input type="text" id="copayXray" placeholder="Same as above"></div>
       </div>
       <div class="row">
+        <div><label>X-ray coinsurance (%) — optional (for plans with a visit copay but coinsurance on x-rays)</label><input type="text" id="coinsXray" placeholder="Blank = x-rays follow the copay/coinsurance above"></div>
+      </div>
+      <div class="row">
         <div><label>Max insurance-covered visits (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
         <div><label>Out-of-pocket max remaining ($) — optional</label><input type="text" id="oopRemaining" placeholder="Blank = not tracked"></div>
       </div>
       <div class="checkbox-row"><input type="checkbox" id="deductibleAppliesToCopay"><label for="deductibleAppliesToCopay">Deductible also applies before the copay (always applies before coinsurance)</label></div>
       <div class="checkbox-row"><input type="checkbox" id="billFullIfZeroCore"><label for="billFullIfZeroCore">Bill full cash fee to patient when allowed amount is $0 (treat as not covered — unchecked means $0 allowed = patient owes $0)</label></div>
-      <div class="hint">Coinsurance % is what the PATIENT pays (insurance covers the rest). Deductible is one running balance shared across adjustments, re-exams, x-rays, TX Phase, and any insurance-billed bolt-ons. <strong>Priority alternates month by month: within each month, the core plan (adjustments/re-exams/x-rays/TX Phase) claims the deductible first, then that same month's bolt-ons draw on whatever's left, then the next month's core gets first crack at whatever remains, and so on.</strong> Once the visit cap is hit, adjustments, re-exams, AND x-rays all switch to self-pay together — insurance is treated as exhausted for the rest of the plan. <strong>Out-of-pocket max remaining tracks everything the patient actually pays (deductible + copay/coinsurance, across core, TX Phase, and bolt-ons) against that dollar amount — once it's used up, every insurance-billed line switches to $0 patient responsibility for the rest of the plan.</strong> Leave it blank if you don't want to track this.</div>
+      <div class="hint">Coinsurance % is what the PATIENT pays (insurance covers the rest). <strong>A copay is never charged above the insurance-allowed amount for a line — if the copay is higher, the patient owes just the allowed amount; lines with a higher allowed amount (exams, additional services) use the copay.</strong> If x-ray coinsurance is filled in, x-rays use that % instead of any copay, while adjustments and re-exams keep the visit copay. Deductible is one running balance shared across adjustments, re-exams, x-rays, TX Phase, and any insurance-billed bolt-ons. <strong>Priority alternates month by month: within each month, the core plan (adjustments/re-exams/x-rays/TX Phase) claims the deductible first, then that same month's bolt-ons draw on whatever's left, then the next month's core gets first crack at whatever remains, and so on.</strong> Once the visit cap is hit, adjustments, re-exams, AND x-rays all switch to self-pay together — insurance is treated as exhausted for the rest of the plan. <strong>Out-of-pocket max remaining tracks everything the patient actually pays (deductible + copay/coinsurance, across core, TX Phase, and bolt-ons) against that dollar amount — once it's used up, every insurance-billed line switches to $0 patient responsibility for the rest of the plan.</strong> Leave it blank if you don't want to track this.</div>
     </div>
 
     <div class="card">
@@ -252,6 +285,8 @@
 
     <div class="card">
       <h2>Actions</h2>
+      <div class="checkbox-row"><input type="checkbox" id="incFindings" checked><label for="incFindings">Include the Findings &amp; Recommendations page when printing (one-sided, nothing on the back)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="incSheet" checked><label for="incSheet">Include the spreadsheet-style financial breakdown page when printing (its own sheet, nothing on the back)</label></div>
       <div class="btn-bar">
         <button type="button" id="newPatientBtn" class="secondary">New patient (reset everything)</button>
         <button type="button" id="copyBtn" class="secondary">Copy plan as text</button>
@@ -410,13 +445,13 @@
     }
   };
 
-  // Baby plan = the post-birth portion of the pregnancy plan: 2x/week x2wks, then
-  // 1x/week x6wks (10 visits), no exams along the way. The last visit is the
+  // Baby plan = the post-birth portion of the pregnancy plan: 2x/week x4wks, then
+  // 1x/week x8wks (16 visits), no exams along the way. The last visit is the
   // anniversary exam (the plan's only exam, no x-ray), plus the auto-added report
-  // visit = 11 visits total.
+  // visit = 17 visits total.
   var BABY_PRESET_PLAN = preset([
-    { freq: 2, weeks: 2, reExamInterval: 0 },
-    { freq: 1, weeks: 6, reExamInterval: 0 }
+    { freq: 2, weeks: 4, reExamInterval: 0 },
+    { freq: 1, weeks: 8, reExamInterval: 0 }
   ], [], false, 0);
 
   // Pregnancy: 1x/week until end of 2nd trimester, then 2x/week until the due date,
@@ -488,8 +523,8 @@
       }
       phases.push({ freq: 2, weeks: phase2Weeks, reExamInterval: 0, examAt: at2, extraEndVisits: EXTRA_LATE_VISITS });
     }
-    phases.push({ freq: 2, weeks: 2, reExamInterval: 0, freeEventBefore: true, freeEventAreas: 2, newMonthHere: true });
-    phases.push({ freq: 1, weeks: 6, reExamInterval: 0 });
+    phases.push({ freq: 2, weeks: 4, reExamInterval: 0, freeEventBefore: true, freeEventAreas: 2, newMonthHere: true });
+    phases.push({ freq: 1, weeks: 8, reExamInterval: 0 });
     return {
       plan: preset(phases, [], false, 0),
       skipAfterWeek: phase1Weeks + phase2Weeks
@@ -516,7 +551,7 @@
     { key: '6mo', label: '6-Month' },
     { key: '9mo', label: '9-Month' },
     { key: '12mo', label: '12-Month' },
-    { key: BABY_KEY, label: 'Baby (8 weeks)' },
+    { key: BABY_KEY, label: 'Baby (12 weeks)' },
     { key: PREGNANCY_KEY, label: 'Pregnancy' },
     { key: CUSTOM_KEY, label: 'Build my own' }
   ];
@@ -612,7 +647,7 @@
     } else if (state.presetLength === PREGNANCY_KEY) {
       dueDateRow.innerHTML =
         '<div class="row"><div><label>Estimated due date</label><input type="date" id="dueDate" value="' + (state.dueDate || '') + '"></div></div>' +
-        '<div class="hint">1x/week until the end of the 2nd trimester, then 2x/week until the due date. 2 extra visits are built into the final month before the due date in case baby comes late. A recovery break of up to 2 weeks starts at the due date (it stays fixed to the due date even if other closures are added), then a complimentary post-baby exam + x-ray, then 2x/week for 2 weeks, 1x/week for 6 weeks, and the anniversary exam. Set the plan start date above and the due date here.</div>';
+        '<div class="hint">1x/week until the end of the 2nd trimester, then 2x/week until the due date. 2 extra visits are built into the final month before the due date in case baby comes late. A recovery break of up to 2 weeks starts at the due date (it stays fixed to the due date even if other closures are added), then a complimentary post-baby exam + x-ray, then 2x/week for 4 weeks, 1x/week for 8 weeks, and the anniversary exam. Set the plan start date above and the due date here.</div>';
       $('dueDate').addEventListener('input', function() {
         state.dueDate = this.value;
         applyPregnancyPreset();
@@ -1155,6 +1190,11 @@
     var copayGeneral = Math.max(0, parseFloat($('copayGeneral').value) || 0);
     var copayXrayRaw = $('copayXray').value;
     var copayXray = copayXrayRaw !== '' ? Math.max(0, parseFloat(copayXrayRaw) || 0) : null;
+    // Optional: some plans charge a visit copay but coinsurance on x-rays. When this is
+    // filled in, x-rays bill at this coinsurance % (ignoring any copay) while
+    // adjustments/re-exams keep using the visit copay/coinsurance above.
+    var coinsXrayRaw = $('coinsXray').value.trim();
+    var coinsXray = coinsXrayRaw !== '' ? Math.max(0, Math.min(100, parseFloat(coinsXrayRaw) || 0)) : null;
     var deductibleAppliesToCopay = $('deductibleAppliesToCopay').checked;
     var billFullIfZeroCore = $('billFullIfZeroCore').checked;
     var mainVisitCap = parseCap($('mainVisitCap').value);
@@ -1185,6 +1225,11 @@
       // the deductible.
       var mode = (!noExtraCharge && copayAmt > 0) ? 'copay' : 'coinsurance';
       var effectiveCoinsPct = noExtraCharge ? 0 : coinsPct;
+      // A copay can never be more than the insurance-allowed amount for the line — if it
+      // is, the patient only owes the allowed amount. (Lines whose allowed amount is
+      // higher than the copay — e.g. exams and most additional services — still use the
+      // copay.)
+      if (mode === 'copay') copayAmt = Math.min(copayAmt, allowedAmount);
       var raw;
       if (mode === 'copay' && !deductibleAppliesToCopay) raw = copayAmt;
       else if (runningDeductible >= allowedAmount) { runningDeductible -= allowedAmount; raw = allowedAmount; }
@@ -1192,7 +1237,7 @@
         var remainder = allowedAmount - runningDeductible;
         var ded = runningDeductible;
         runningDeductible = 0;
-        var share = mode === 'coinsurance' ? remainder * (effectiveCoinsPct / 100) : copayAmt;
+        var share = mode === 'coinsurance' ? remainder * (effectiveCoinsPct / 100) : Math.min(copayAmt, remainder);
         raw = ded + share;
       } else {
         raw = mode === 'coinsurance' ? allowedAmount * (effectiveCoinsPct / 100) : copayAmt;
@@ -1213,6 +1258,7 @@
       return { monthIdx: monthIdx, weekStart: weekStart, weekEnd: weekEnd,
         adjCount: 0, reExamCount: 0, xrayCount: 0, txPhaseCount: 0, hasAnniversary: false,
         subtotal: 0, insuranceSavings: 0, selfPayCash: 0,
+        insOwed: 0, kindCash: {}, freeReExam: 0, freeXray: 0,
         insuranceVisits: 0, selfPayVisits: 0 };
     }
     function newBoltMonth(monthIdx, weekStart, weekEnd) {
@@ -1220,14 +1266,18 @@
       BOLT_ON_CATALOG.forEach(function(c) { counts[c.key] = 0; });
       return { monthIdx: monthIdx, weekStart: weekStart, weekEnd: weekEnd,
         counts: counts, subtotal: 0, insuranceSavings: 0, selfPayCash: 0,
+        insOwed: 0, kindCash: {},
         insuranceVisits: 0, selfPayVisits: 0 };
     }
     // applyLine only tallies dollars — visit-level insurance/self-pay counts are tracked
     // separately per visit (an exam + adjustment on the same visit is still one visit).
-    function applyLine(m, cashFull, owed, bucket) {
+    // insOwed = what the patient still owes on insurance-billed lines (deductible/copay/
+    // coinsurance); kindCash = full fee per line type, both used by the spreadsheet page.
+    function applyLine(m, cashFull, owed, bucket, kind) {
       m.subtotal += cashFull;
-      if (bucket === 'insurance') m.insuranceSavings += (cashFull - owed);
+      if (bucket === 'insurance') { m.insuranceSavings += (cashFull - owed); m.insOwed += owed; }
       else m.selfPayCash += cashFull;
+      if (kind) m.kindCash[kind] = (m.kindCash[kind] || 0) + cashFull;
     }
 
     // precompute bolt-on occurrences -> visitNum -> [boltOn indices]
@@ -1273,8 +1323,8 @@
         // complimentary: $0 on every line, no deductible draw, no insurance visit cap
         // consumption, and never billed to insurance at all.
         if (v.isFreeEvent) {
-          if (v.isReExam) { applyLine(cm, 0, 0, 'selfpay'); cm.reExamCount++; }
-          if (v.isXray) { applyLine(cm, 0, 0, 'selfpay'); cm.xrayCount++; }
+          if (v.isReExam) { applyLine(cm, 0, 0, 'selfpay'); cm.reExamCount++; cm.freeReExam++; }
+          if (v.isXray) { applyLine(cm, 0, 0, 'selfpay'); cm.xrayCount++; cm.freeXray++; }
           cm.selfPayVisits++;
           return;
         }
@@ -1294,6 +1344,7 @@
         // main line we hit first, and every other main line on that same visit follows
         // that same insurance-vs-selfpay decision rather than re-checking the cap.
         var visitCovered = hasInsurance && (mainVisitCap === null || mainInsuredCount < mainVisitCap);
+        var visitExamOwed = 0;
 
         mainLines.forEach(function(type) {
           var cashFull, owed, bucket;
@@ -1307,7 +1358,21 @@
             if (notCovered) { owed = cashFull; bucket = 'selfpay'; }
             else if (visitCovered) {
               if (visitBucket == null) mainInsuredCount++; // consume one cap slot, once, for the whole visit
-              owed = chargeInsuranceLine(allowed, copayGeneral * units, coinsurancePct);
+              // Visit copay: when a visit carries an adjustment AND a re-exam under a flat
+              // copay, the two are one visit — their allowed amounts combine and the
+              // patient owes ONE copay (or the combined allowed, if that is lower),
+              // not a copay per line. The combined amount is charged once, on the
+              // adjustment line (capped at its fee); the re-exam line gets the rest.
+              var combineVisit = copayGeneral > 0 && v.isReExam && feeAdjAllowed > 0 && feeReExamAllowed > 0;
+              if (combineVisit && type === 'adjustment') {
+                var combinedOwed = chargeInsuranceLine(feeAdjAllowed + feeReExamAllowed * (v.reEvalUnits || 1), copayGeneral, coinsurancePct);
+                owed = Math.min(combinedOwed, cashFull);
+                visitExamOwed = combinedOwed - owed;
+              } else if (combineVisit && type === 'reexam') {
+                owed = visitExamOwed;
+              } else {
+                owed = chargeInsuranceLine(allowed, copayGeneral * units, coinsurancePct);
+              }
               bucket = 'insurance';
             } else { owed = cashFull; bucket = 'selfpay'; }
             if (type === 'adjustment') cm.adjCount++; else cm.reExamCount++;
@@ -1318,12 +1383,15 @@
             var notCoveredX = billFullIfZeroCore && allowedX <= 0;
             if (notCoveredX) { owed = cashFull; bucket = 'selfpay'; }
             else if (visitCovered) {
-              owed = chargeInsuranceLine(allowedX, copayXray != null ? copayXray : copayGeneral, coinsurancePct);
+              var xCopay = copayXray != null ? copayXray : copayGeneral;
+              var xCoins = coinsurancePct;
+              if (coinsXray != null) { xCopay = 0; xCoins = coinsXray; }
+              owed = chargeInsuranceLine(allowedX, xCopay, xCoins);
               bucket = 'insurance';
             } else { owed = cashFull; bucket = 'selfpay'; }
             cm.xrayCount++;
           }
-          applyLine(cm, cashFull, owed, bucket);
+          applyLine(cm, cashFull, owed, bucket, type === 'adjustment' ? 'adj' : (type === 'reexam' ? 'reexam' : 'xray'));
           if (type === 'adjustment') visitBucket = bucket;
         });
 
@@ -1342,7 +1410,7 @@
             bucket = 'insurance';
           } else { owed = cashFull; bucket = 'selfpay'; }
         }
-        applyLine(cm, cashFull, owed, bucket);
+        applyLine(cm, cashFull, owed, bucket, 'tx');
         cm.txPhaseCount++;
         // TX Phase does NOT add to the visit count — it's a service performed during a
         // visit the patient is already at for their adjustment (already counted above),
@@ -1372,7 +1440,7 @@
               bucket = 'insurance';
             } else { owed = cashFull; bucket = 'selfpay'; }
           }
-          applyLine(bm, cashFull, owed, bucket);
+          applyLine(bm, cashFull, owed, bucket, b.key);
           bm.counts[b.key]++;
           if (bucket === 'insurance') visitHadInsuranceLine = true;
         });
@@ -1737,6 +1805,7 @@
         ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') + '</div>' +
           '<div>Deductible remaining at start: ' + money(numVal('deductibleRemaining')) + '</div>' +
           '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>' +
+          ($('coinsXray').value.trim() !== '' ? '<div>X-ray coinsurance: ' + (parseFloat($('coinsXray').value) || 0) + '%</div>' : '') +
           (plan.oopTracked ? '<div>Out-of-pocket max remaining: ' + money(numVal('oopRemaining')) + '</div>' : '')
         : '<div>Self-pay — no insurance billed on this plan</div>') +
       '</div>';
@@ -1914,6 +1983,131 @@
       html += '</div>'; // .pv-page
     }
 
+    // ---- Findings & Recommendations page (one-sided, nothing on the back) ----
+    var incFindings = $('incFindings').checked;
+    var incSheet = $('incSheet').checked;
+    if (incFindings) {
+      // Preset plans carry their own month recommendation (4/6/9/12-Month, Baby = 2).
+      // Only "Build my own" and Pregnancy are calculated: plan weeks (not counting the
+      // report-visit week) in 4-week months, rounded. Closure weeks are NOT counted —
+      // they're tacked on to the end, not part of the months of care.
+      var presetMonths = /^(\d+)mo$/.exec(state.presetLength || '');
+      var careMonths;
+      if (presetMonths) careMonths = parseInt(presetMonths[1], 10);
+      else if (state.presetLength === BABY_KEY) careMonths = 3;
+      else careMonths = Math.max(1, Math.round((plan.totalWeeks - 1) / 4));
+      var phaseSlots = '';
+      for (var si = 0; si < 4; si++) {
+        var ph = state.phases[si];
+        var tpw = ph ? (ph.freq >= 5 ? 'Daily' : String(ph.freq)) : '';
+        if (ph && ph.totalVisits) {
+          phaseSlots += '<div class="pv-fr-slot"><span class="pv-fr-blank pv-fr-blank-s">' + phaseVisitCount(ph) + '</span> daily visits during the first week</div>';
+        } else {
+          phaseSlots += '<div class="pv-fr-slot"><span class="pv-fr-blank pv-fr-blank-s">' + escapeHtml(tpw) + '</span> times a week for <span class="pv-fr-blank pv-fr-blank-m">' + (ph ? ph.weeks : '') + '</span> weeks</div>';
+        }
+      }
+      var isPreg = state.presetLength === PREGNANCY_KEY;
+      var basis = isPreg
+        ? ['Exam findings', 'Restricted motion in your spine', 'Current level of health', 'Postural imbalances', 'Age']
+        : ['How long the subluxations have been present', 'Exam findings', 'Restricted motion in your spine', 'Current level of health', 'Postural imbalances', 'Phase of vertebral subluxation degeneration', 'Age'];
+      html += '<div class="pv-page pv-fr' + (isPreg ? ' pv-fr-preg' : '') + '">';
+      html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Findings &amp; Recommendations</span></div>';
+      html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
+      html += '<div class="pv-fr-sec"><div class="pv-fr-h">Name</div><div class="pv-fr-name">' + escapeHtml(name) + '</div></div>';
+      html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your recommendations are based on</div><div class="pv-fr-basis">' +
+        basis.map(function(t) { return '<div>☐ ' + t + '</div>'; }).join('') + '</div></div>';
+      if (isPreg) {
+        var list2 = function(items) { return '<div class="pv-fr-basis">' + items.map(function(t) { return '<div>• ' + t + '</div>'; }).join('') + '</div>'; };
+        html += '<div class="pv-fr-sec"><div class="pv-fr-h">Benefits of chiropractic care during pregnancy</div>' + list2([
+          'Less back pain', 'Reduced pelvic and round ligament discomfort', 'Better pelvic alignment and balance', 'Less back labor and shorter labor times',
+          'Reduced need for pain medication', 'More comfort while breastfeeding']) + '</div>';
+        html += '<div class="pv-fr-sec"><div class="pv-fr-h">Goals of your care</div>' + list2([
+          'Keep your spine and pelvis balanced as your body changes', 'Ease the strain of a shifting center of gravity and loosening joints',
+          'Give baby the best chance at an ideal position for birth', 'Prepare your body for a more comfortable labor and delivery',
+          'Support your recovery after baby arrives', 'Keep baby\'s transition into the world as smooth as possible']) + '</div>';
+        var dueTxt = state.dueDate ? fmtShortDate(new Date(state.dueDate + 'T00:00:00')) : '';
+        html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your care schedule' + (dueTxt ? ' — estimated due date ' + dueTxt : '') + '</div>' +
+          '<div class="pv-fr-slot"><b>1st &amp; 2nd trimesters:</b> 1 visit per week</div>' +
+          '<div class="pv-fr-slot"><b>3rd trimester:</b> 2 visits per week</div>' +
+          '<div class="pv-fr-slot"><b>4th trimester (after baby arrives):</b> 2 visits per week for 4 weeks, then 1 visit per week for 8 weeks</div>' +
+          '<div class="pv-fr-note">Each adjustment builds on the last, keeping your body in better balance through every stage.</div></div>';
+      } else {
+        html += '<div class="pv-fr-sec"><div class="pv-fr-big"><span class="pv-fr-blank pv-fr-blank-s">' + careMonths + '</span> months of corrective chiropractic care</div></div>';
+        html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your initial intensive care</div>' + phaseSlots +
+          '<div class="pv-fr-note">Each adjustment builds on the last. Current research shows subluxations tend to fall back to their old behavior every 24–48 hours.</div></div>';
+      }
+      html += '<div class="pv-fr-sec"><div class="pv-fr-h">How your program works</div><div class="pv-fr-prog">' +
+        '<div><span class="n">01</span><div><b>Comparative exams every 8-10 visits</b><br>To measure ongoing results.</div></div>' +
+        (isPreg ? '' : '<div><span class="n">02</span><div><b>Cervical extension with a Denneroll, daily at home</b><br>Gives faster results when done faithfully and consistently.</div></div>') +
+        '<div><span class="n">' + (isPreg ? '02' : '03') + '</span><div><b>Low-tech rehab</b><br>Educates and strengthens the core and key muscle groups of the spine.</div></div>' +
+        '<div><span class="n">' + (isPreg ? '03' : '04') + '</span><div><b>Spinal workshops</b><br>Attend 2 in the first month, then one every month. You\'ll learn home care. Patients get faster, longer-lasting results when they make lifestyle changes outside the office.</div></div>' +
+        '</div></div>';
+      html += '</div>'; // .pv-page
+      // Blank sheet so the findings page's back stays empty when the next page is another
+      // sheet (single-sided printers: one extra blank sheet; duplex: keeps pages unpaired).
+      if (incSheet) html += '<div class="pv-page pv-blank">&nbsp;</div>';
+    }
+
+    // ---- Spreadsheet-style breakdown (landscape, own sheet) ----
+    if (incSheet) {
+      var coreBy = {}, boltBy = {}, allIdx = {};
+      plan.coreMonths.forEach(function(m) { coreBy[m.monthIdx] = m; allIdx[m.monthIdx] = 1; });
+      plan.boltMonths.forEach(function(m) { boltBy[m.monthIdx] = m; allIdx[m.monthIdx] = 1; });
+      var idxList = Object.keys(allIdx).map(Number).sort(function(a, b) { return a - b; });
+      var sheetRows = '';
+      var T = { actual: 0, boltFee: 0, total: 0, ins: 0, sav: 0, cpC: 0, cpB: 0, spC: 0, spB: 0, owe: 0 };
+      var zero = function(n) { return n ? money(n) : '—'; };
+      idxList.forEach(function(mi) {
+        var c = coreBy[mi], b = boltBy[mi];
+        var desc = [];
+        if (c) {
+          if (c.adjCount) desc.push(c.adjCount + ' Adjustment' + (c.adjCount === 1 ? '' : 's') + ' (' + money(CASH.adjustment) + ' ea)');
+          var regRe = c.reExamCount - (c.hasAnniversary ? 1 : 0) - (c.freeReExam || 0);
+          if (regRe > 0) desc.push(regRe + ' Re-Evaluation' + (regRe === 1 ? '' : 's') + ' (' + money(CASH.reexam) + ')');
+          if (c.hasAnniversary) desc.push('Anniversary Eval (' + money(CASH.reexam) + ')');
+          var regX = c.xrayCount - (c.freeXray || 0);
+          if (regX > 0) desc.push(regX + ' Re-X-Ray visit' + (regX === 1 ? '' : 's') + ' (' + money(CASH.xrayPerArea) + '/area)');
+          if (c.txPhaseCount) desc.push(c.txPhaseCount + ' TX Chair (' + money(CASH.txPhase) + ')');
+          if (c.freeReExam) desc.push(c.freeReExam + ' post-baby exam (no charge)');
+          if (c.freeXray) desc.push('post-baby x-ray (no charge)');
+        }
+        var boltDesc = [];
+        if (b) BOLT_ON_CATALOG.forEach(function(k) { if (b.counts[k.key]) boltDesc.push(b.counts[k.key] + ' ' + k.label); });
+        var aF = c ? c.subtotal : 0, bF = b ? b.subtotal : 0;
+        var insC = (c ? c.insuranceSavings : 0) + (b ? b.insuranceSavings : 0);
+        var savC = (c ? c.selfPaySavings : 0) + (b ? b.selfPaySavings : 0);
+        var cpC = c ? c.insOwed : 0, cpB = b ? b.insOwed : 0;
+        var spC = c ? c.selfPayCash - c.selfPaySavings : 0, spB = b ? b.selfPayCash - b.selfPaySavings : 0;
+        var owe = cpC + cpB + spC + spB;
+        T.actual += aF; T.boltFee += bF; T.total += aF + bF; T.ins += insC; T.sav += savC; T.cpC += cpC; T.cpB += cpB; T.spC += spC; T.spB += spB; T.owe += owe;
+        var wkS = c ? c.weekStart : b.weekStart, wkE = c ? c.weekEnd : b.weekEnd;
+        sheetRows += '<tr><td class="ctr">' + mi + '</td><td class="nw">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' +
+          '<td>' + escapeHtml(desc.join('; ')) + '</td><td class="num">' + zero(aF) + '</td>' +
+          '<td>' + escapeHtml(boltDesc.join('; ')) + '</td><td class="num">' + zero(bF) + '</td><td class="num">' + money(aF + bF) + '</td>' +
+          '<td class="num">' + zero(savC) + '</td><td class="num">' + zero(insC) + '</td>' +
+          '<td class="num">' + zero(cpC) + '</td><td class="num">' + zero(cpB) + '</td><td class="num">' + zero(spC) + '</td><td class="num">' + zero(spB) + '</td>' +
+          '<td class="num b">' + money(owe) + '</td></tr>';
+      });
+      var sheetNotes = [];
+      if (plan.hasInsurance) {
+        sheetNotes.push('Insurance' + (insurancePlanName ? ': ' + insurancePlanName : '') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') +
+          ' · Deductible remaining at start ' + money(numVal('deductibleRemaining')) + ' · Copay ' + money(numVal('copayGeneral')) + ' · Coinsurance ' + ($('coinsurancePct').value || 0) + '%' +
+          ($('coinsXray').value.trim() !== '' ? ' · X-ray coinsurance ' + (parseFloat($('coinsXray').value) || 0) + '%' : '') +
+          (plan.oopTracked ? ' · Out-of-pocket max remaining ' + money(numVal('oopRemaining')) : ''));
+        sheetNotes.push('Ins Contrib = fees insurance picks up. Co-pay columns = what the patient still owes on insurance-billed visits (deductible, copay, coinsurance).');
+      }
+      sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
+      if (plan.hasFreeEvent) sheetNotes.push('The post-baby evaluation and x-ray are no charge and not billed to insurance.');
+      var sz = idxList.length > 14 ? 8 : (idxList.length > 9 ? 9 : 10);
+      html += '<div class="pv-page pv-sheet" style="font-size:' + sz + 'px;">';
+      html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '" style="max-height:40px;">' : '') + '<span class="pv-title">Care Plan Worksheet — How the Numbers Are Figured</span></div>';
+      html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
+      html += '<table class="pv-table pv-sheet-table"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Bolt-On Services</th><th class="num">Bolt-On Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Ins Contrib</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Bolt-Ons</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Bolt-Ons</th><th class="num">Patient Owes</th></tr></thead><tbody>' + sheetRows +
+        '</tbody><tfoot><tr><td colspan="3">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.ins) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.owe) + '</td></tr></tfoot></table>';
+      html += '<div class="pv-footnote" style="font-style:normal;">Patient Owes = Co-pay Chiro + Co-pay Bolt-Ons + Self-pay Chiro + Self-pay Bolt-Ons = Total Fees − Ins Contrib − Savings Amt. ' + sheetNotes.map(escapeHtml).join(' ') + '</div>';
+      html += '</div>'; // .pv-page
+    }
+
     pv.innerHTML = html;
   }
 
@@ -1922,7 +2116,7 @@
 
   ['patientName', 'startDate', 'practiceName', 'practicePhone', 'insurancePlanName',
    'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
-   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining']
+   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'coinsXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining', 'incFindings', 'incSheet']
     .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
 
   // Pregnancy phases are date-driven — recompute them whenever the plan start date
@@ -1953,7 +2147,7 @@
     $('patientName').value = ''; $('startDate').value = '';
     $('insurancePlanName').value = '';
     $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
-    $('coinsurancePct').value = 0; $('copayGeneral').value = 0; $('copayXray').value = '';
+    $('coinsurancePct').value = 0; $('copayGeneral').value = 0; $('copayXray').value = ''; $('coinsXray').value = '';
     $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = '';
     $('billFullIfZeroCore').checked = false; $('oopRemaining').value = '';
     $('feeAdjAllowed').value = 0; $('feeReExamAllowed').value = 0; $('feeXrayAllowedPerArea').value = 0;
