@@ -133,7 +133,7 @@
   .pv-fr-basis > div { padding-left: 1.4em; text-indent: -1.4em; }
   .pv-fr-basis .b { display: inline-block; width: 1.4em; text-indent: 0; }
   .pv-fr-big { font-size: 22px; font-weight: 700; color: #111; }
-  .pv-fr-blank { display: inline-block; border-bottom: 1px solid #333; text-align: center; font-weight: 700; color: #111; }
+  .pv-fr-blank { display: inline-block; text-align: center; font-weight: 700; color: #111; }
   .pv-fr-blank-s { min-width: 60px; }
   .pv-fr-blank-m { min-width: 60px; }
   .pv-fr-slot { font-size: 18px; margin-bottom: 10px; }
@@ -178,13 +178,13 @@
   .pv-sheet-table td, .pv-sheet-table th { overflow: hidden; }
   .pv-sheet-table td.nw { overflow: visible; }
   .pv-sheet-table th { font-size: 0.95em; }
-  .pv-sheet-table th:nth-child(1) { width: 3%; } .pv-sheet-table th:nth-child(2) { width: 10.5%; }
-  .pv-sheet-table th:nth-child(3) { width: 19.5%; } .pv-sheet-table th:nth-child(4) { width: 6.5%; }
-  .pv-sheet-table th:nth-child(5) { width: 7.5%; } .pv-sheet-table th:nth-child(6) { width: 5.5%; }
-  .pv-sheet-table th:nth-child(7) { width: 6.5%; } .pv-sheet-table th:nth-child(8) { width: 6%; }
-  .pv-sheet-table th:nth-child(9) { width: 6.5%; } .pv-sheet-table th:nth-child(10) { width: 5.5%; }
-  .pv-sheet-table th:nth-child(11) { width: 5.5%; } .pv-sheet-table th:nth-child(12) { width: 6.5%; }
-  .pv-sheet-table th:nth-child(13) { width: 5.5%; } .pv-sheet-table th:nth-child(14) { width: 5.5%; }
+  .pv-sheet-table th:nth-child(1) { width: 2.5%; } .pv-sheet-table th:nth-child(2) { width: 8%; }
+  .pv-sheet-table th:nth-child(3) { width: 15%; } .pv-sheet-table th:nth-child(4) { width: 6.5%; }
+  .pv-sheet-table th:nth-child(5) { width: 6%; } .pv-sheet-table th:nth-child(6) { width: 6.5%; }
+  .pv-sheet-table th:nth-child(7) { width: 7%; } .pv-sheet-table th:nth-child(8) { width: 6.5%; }
+  .pv-sheet-table th:nth-child(9) { width: 7%; } .pv-sheet-table th:nth-child(10) { width: 7%; }
+  .pv-sheet-table th:nth-child(11) { width: 6.5%; } .pv-sheet-table th:nth-child(12) { width: 7%; }
+  .pv-sheet-table th:nth-child(13) { width: 6.5%; } .pv-sheet-table th:nth-child(14) { width: 7.5%; }
   /* each month is one boxed group of service lines; no zebra striping inside a group */
   table.pv-table.pv-sheet-table tbody tr:nth-child(odd), table.pv-table.pv-sheet-table tbody tr:nth-child(even) { background: #fff; }
   .pv-sheet-table tbody td { border-top: 1px dotted #aaa; border-bottom: 1px dotted #aaa; }
@@ -2269,6 +2269,8 @@
     // ---- Findings & Recommendations page (one-sided, nothing on the back) ----
     var incFindings = $('incFindings').checked;
     var incSheet = $('incSheet').checked;
+    // The findings page is built here but printed FIRST (prepended to the output below).
+    var preFindingsHtml = html; html = '';
     if (incFindings && careKind === 'cont') {
       // Continued corrective care has its own recommendations page (maintenance has none).
       var contBasis = ['Exam findings', 'Muscle inhibition', 'Postural imbalances', 'Age', 'Phase of vertebral subluxation degeneration', 'Current level of health', 'Restricted motion in your spine', 'Engagement in previous homework to this point'];
@@ -2292,7 +2294,7 @@
         ['Improvement in active range of motion', 'Improvement in postural distortions', 'Reduction of edema, hypertonicity and swelling', 'Reduction of pain/discomfort'].map(function(t) { return '<div><span class="b">☐</span>' + t + '</div>'; }).join('') +
         '<div style="grid-column:1/3;"><span class="b">☐</span>Other: ______________________________________________</div></div></div>';
       html += '</div>'; // .pv-page
-      if (incSheet) html += '<div class="pv-page pv-blank">&nbsp;</div>';
+      html += '<div class="pv-page pv-blank">&nbsp;</div>';
     }
     if (incFindings && !careKind) {
       // Preset plans carry their own month recommendation (4/6/9/12-Month, Baby = 2).
@@ -2307,6 +2309,7 @@
       var phaseSlots = '';
       for (var si = 0; si < 4; si++) {
         var ph = state.phases[si];
+        if (!ph) continue;   // no blank frequency lines for unused slots
         var tpw = ph ? (ph.freq >= 5 ? 'Daily' : String(ph.freq)) : '';
         if (ph && ph.totalVisits) {
           phaseSlots += '<div class="pv-fr-slot"><span class="pv-fr-blank pv-fr-blank-s">' + phaseVisitCount(ph) + '</span> daily visits during the first week</div>';
@@ -2353,8 +2356,9 @@
       html += '</div>'; // .pv-page
       // Blank sheet so the findings page's back stays empty when the next page is another
       // sheet (single-sided printers: one extra blank sheet; duplex: keeps pages unpaired).
-      if (incSheet) html += '<div class="pv-page pv-blank">&nbsp;</div>';
+      html += '<div class="pv-page pv-blank">&nbsp;</div>';
     }
+    var findingsPart = html; html = preFindingsHtml;
 
     // ---- Spreadsheet-style breakdown (landscape, own sheet) ----
     if (incSheet) {
@@ -2437,7 +2441,7 @@
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
       if (plan.hasFreeEvent) sheetNotes.push('The post-baby evaluation and x-ray are at Dr. Burke\'s expense and not billed to insurance.');
-      var sz = sheetLineCount > 40 ? 6 : (sheetLineCount > 28 ? 6.5 : 7.5);
+      var sz = sheetLineCount > 40 ? 5.5 : (sheetLineCount > 28 ? 6 : 7);
       html += '<div class="pv-page pv-sheet" style="font-size:' + sz + 'px;">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '" style="max-height:40px;">' : '') + '<span class="pv-title">Care Plan Worksheet — How the Numbers Are Figured</span></div>';
       html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
@@ -2448,7 +2452,7 @@
       html += '</div>'; // .pv-page
     }
 
-    pv.innerHTML = html;
+    pv.innerHTML = findingsPart + html;
   }
 
   var lastPlan = null;
