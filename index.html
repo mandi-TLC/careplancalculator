@@ -506,8 +506,8 @@
   function buildPregnancyPreset(startDateStr, dueDateStr, closedWeeks) {
     closedWeeks = closedWeeks || [];
     var msWeek = 7 * 24 * 60 * 60 * 1000;
-    var start = startDateStr ? new Date(startDateStr + 'T00:00:00') : null;
-    var due = dueDateStr ? new Date(dueDateStr + 'T00:00:00') : null;
+    var start = saneDate(startDateStr) ? new Date(startDateStr + 'T00:00:00') : null;
+    var due = saneDate(dueDateStr) ? new Date(dueDateStr + 'T00:00:00') : null;
     var phase1Weeks = 0, phase2Weeks = 13;
     if (start && due) {
       // Pre-birth care is a run of 7-day periods counted BACK from the due date (the last
@@ -515,7 +515,7 @@
       // be partial. The last 13 periods are the 3rd trimester (2x/week); any before that
       // are 1x/week.
       var daysInc = Math.round((due.getTime() - start.getTime()) / 86400000) + 1;
-      var P = daysInc >= 1 ? Math.ceil(daysInc / 7) : 0;
+      var P = daysInc >= 1 ? Math.min(60, Math.ceil(daysInc / 7)) : 0;
       phase2Weeks = Math.min(13, P);
       phase1Weeks = P - phase2Weeks;
     }
@@ -820,17 +820,23 @@
         examExtra = '<div class="row">' + exs.map(function(v, k) {
           return '<div><label>Exam ' + (k + 1) + ' after visit # (of this phase)</label><input type="number" min="1" step="1" value="' + v + '" data-pex="' + idx + '" data-k="' + k + '"></div>';
         }).join('') + '</div>' +
-          '<div class="hint">This phase has ' + visitsHere + ' visit' + (visitsHere === 1 ? '' : 's') + ' (' + (phase.weeks || 0) + ((phase.weeks || 0) === 1 ? ' week at ' : ' weeks at ') + phase.freq + 'x/week' + (closedHere.length ? ', minus ' + closedHere.length + ' closed week' + (closedHere.length === 1 ? '' : 's') : '') + '). Count only the visits that actually happen; the late-baby extra visits are not counted.' +
+          '<div class="hint">' +
+          (phase.role === 'pre2' ? '<b>How to place the 3rd-trimester exams:</b> multiply the weeks by the visits per week, subtract the 9 planned visits of the final month before the due date, then divide what is left into groups of 8, 9 or 10 visits, as evenly as possible. No exam falls in that final month; the next exam is the post-birth one.<br><br>' : '') +
+          'This phase has ' + visitsHere + ' visit' + (visitsHere === 1 ? '' : 's') + ' (' + (phase.weeks || 0) + ((phase.weeks || 0) === 1 ? ' week at ' : ' weeks at ') + phase.freq + 'x/week' + (closedHere.length ? ', minus ' + closedHere.length + ' closed week' + (closedHere.length === 1 ? '' : 's') : '') + '). Count only the visits that actually happen; the late-baby extra visits are not counted.' +
           (closedHere.length ? ' <b>Office closed in this phase: week' + (closedHere.length === 1 ? ' ' : 's ') + closedHere.join(', ') + ' of the plan (' + (closedHere.length * phase.freq) + ' visit' + (closedHere.length * phase.freq === 1 ? '' : 's') + ' removed).</b>' : '') +
           (phase.role === 'pre2' ? (function() {
+            var full = (phase.weeks || 0) * phase.freq, lost = closedHere.length * phase.freq;
             var B = visitsHere - 9, tip = '';
             if (B >= 7) {
               var bk = 1, bd = 1e9;
               for (var kk = 1; kk <= Math.ceil(B / 6); kk++) { var dd = Math.abs(B / kk - 9); if (dd < bd - 1e-9) { bd = dd; bk = kk; } }
               var ps = []; for (var jj = 1; jj <= bk; jj++) ps.push(Math.round(jj * B / bk));
-              tip = ' Right now: ' + visitsHere + ' − 9 = ' + B + ', split into ' + bk + ' group' + (bk === 1 ? '' : 's') + ' → exam' + (bk === 1 ? '' : 's') + ' after visit' + (bk === 1 ? ' ' : 's ') + ps.join(', ') + '.';
+              tip = '<br><br><b>Worked out for this plan:</b> ' + (phase.weeks || 0) + ' weeks × ' + phase.freq + ' visits = ' + full +
+                (lost ? '; minus ' + lost + ' visit' + (lost === 1 ? '' : 's') + ' lost to the closed week' + (closedHere.length === 1 ? '' : 's') + ' = ' + visitsHere + ' visits that will actually happen' : '') +
+                '; minus the 9 final-month visits = ' + B + '; split into ' + bk + ' group' + (bk === 1 ? '' : 's') + ' → exam' + (bk === 1 ? '' : 's') + ' after visit' + (bk === 1 ? ' ' : 's ') + ps.join(' and ') + '.' +
+                (lost ? ' The exam boxes use this reduced count, so the closed visits are already taken out — do not add them back (the last exam is visit ' + ps[ps.length - 1] + ', not ' + (full - 9) + ').' : '');
             }
-            return '<br><b>How to place the 3rd-trimester exams:</b> multiply the weeks by the visits per week, subtract the 9 planned visits of the final month before the due date, then divide what is left into groups of 8, 9 or 10 visits, as evenly as possible. No exam falls in that final month; the next exam is the post-birth one. If a week is closed in this phase, use the reduced visit count shown above.' + tip;
+            return tip;
           })() : '') +
           ' <button type="button" class="small" data-pexreset="' + idx + '">Reset to automatic</button></div>';
       }
@@ -1009,14 +1015,14 @@
           state.skipWeeks[idx].closureEnd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
         if (endInp) endInp.value = state.skipWeeks[idx].closureEnd || '';
-        if (state.presetLength === PREGNANCY_KEY) renderPhases();
+        if (state.presetLength === PREGNANCY_KEY) { applyPregnancyPreset(); renderPhases(); renderXrayPlan(); }
         recalc();
       });
     });
     container.querySelectorAll('input[data-field=closureEnd]').forEach(function(inp) {
       inp.addEventListener('change', function() {
         state.skipWeeks[+inp.getAttribute('data-idx')].closureEnd = inp.value || null;
-        if (state.presetLength === PREGNANCY_KEY) renderPhases();
+        if (state.presetLength === PREGNANCY_KEY) { applyPregnancyPreset(); renderPhases(); renderXrayPlan(); }
         recalc();
       });
     });
@@ -1029,7 +1035,8 @@
     container.querySelectorAll('[data-remove-skip]').forEach(function(btn) {
       btn.addEventListener('click', function() {
         state.skipWeeks.splice(+btn.getAttribute('data-remove-skip'), 1);
-        renderSkipWeeks(); if (state.presetLength === PREGNANCY_KEY) renderPhases(); recalc();
+        if (state.presetLength === PREGNANCY_KEY) { applyPregnancyPreset(); renderPhases(); renderXrayPlan(); }
+        renderSkipWeeks(); recalc();
       });
     });
   }
@@ -1830,8 +1837,15 @@
   // not the start date. Returns the first day of period 1 (on or up to 6 days before the
   // real start date; the first printed row is clamped to the real start). For every other
   // plan it just returns the start date. Safe to apply twice.
+  // While a date is being typed, the browser reports partial years (0002, 0020, 0202...).
+  // Those must never reach the schedule math — a year-2 start date means ~100,000 weeks.
+  function saneDate(s) {
+    var m = /^(\d{4})-\d{2}-\d{2}$/.exec(s || '');
+    return !!m && +m[1] >= 2000 && +m[1] <= 2100;
+  }
   function gridStartFor(startStr) {
     if (!startStr || state.presetLength !== PREGNANCY_KEY || !state.dueDate) return startStr;
+    if (!saneDate(startStr) || !saneDate(state.dueDate)) return startStr;
     var days = Math.round((new Date(state.dueDate + 'T00:00:00') - new Date(startStr + 'T00:00:00')) / 86400000) + 1;
     if (days < 1) return startStr;
     return toISODate(addDays(state.dueDate, -(7 * Math.ceil(days / 7) - 1)));
