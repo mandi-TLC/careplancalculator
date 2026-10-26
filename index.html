@@ -118,7 +118,7 @@
   table.pv-table td.pv-money-col, table.pv-table th.pv-money-col { width: 13%; }
   table.pv-table td.pv-money-col { white-space: nowrap; }
   table.pv-table tfoot td { font-weight: 700; background: #fff; }
-  .pv-signed-row { display: flex; gap: 40px; margin-top: 68px; }
+  .pv-signed-row { display: flex; gap: 40px; margin-top: 55px; }
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
   .pv-footnote { font-style: italic; color: #333; margin-top: 6px; }
   .pv-page2-img { width: 100%; display: block; }
@@ -693,7 +693,7 @@
     } else if (state.presetLength === PREGNANCY_KEY) {
       dueDateRow.innerHTML =
         '<div class="row"><div><label>Estimated due date</label><input type="date" id="dueDate" value="' + (state.dueDate || '') + '"></div></div>' +
-        '<div class="hint">1x/week until the end of the 2nd trimester, then 2x/week until the due date. 2 extra visits are built into the final month before the due date in case baby comes late. A recovery break of up to 2 weeks starts at the due date (it stays fixed to the due date even if other closures are added), then a complimentary post-baby exam + x-ray, then 2x/week for 4 weeks, 1x/week for 8 weeks, and the anniversary exam. Set the plan start date above and the due date here.</div>';
+        '<div class="hint">1x/week until the end of the 2nd trimester, then 2x/week until the due date. Pre-birth 4-week months are counted back from the due date (a short first month absorbs any leftover weeks), and one extra visit is built into each of the last two 4-week months before the due date in case baby comes late. A recovery break of up to 2 weeks starts at the due date (it stays fixed to the due date even if other closures are added), then 2x/week for 4 weeks (the first visit back includes a complimentary post-baby exam + x-ray, and an exam on the 8th visit), 1x/week for 8 weeks, and the anniversary exam. Set the plan start date above and the due date here.</div>';
       $('dueDate').addEventListener('input', function() {
         state.dueDate = this.value;
         applyPregnancyPreset();
@@ -1088,6 +1088,13 @@
     // pre-birth and post-birth care never share a table row.
     var monthOff = 0;
     function monthOf(w) { return Math.ceil((w + monthOff) / 4); }
+    // Pregnancy: pre-birth 4-week blocks are counted BACK from the due date, so the last
+    // block always ends at the due date and any partial block lands at the very start
+    // of the plan (a short first month) instead of at the end.
+    for (var pi0 = 0, preWeeks = 0; pi0 < state.phases.length; pi0++) {
+      if (state.phases[pi0].freeEventBefore) { if (pi0 > 0) monthOff = (4 - (preWeeks % 4)) % 4; break; }
+      preWeeks += Math.max(0, state.phases[pi0].weeks || 0);
+    }
 
     state.phases.forEach(function(phase) {
       var freq = Math.max(0, phase.freq || 0);
@@ -1098,18 +1105,11 @@
       // A "free event" (used by the pregnancy preset's post-due-date exam + x-ray)
       // is a single complimentary visit inserted right before this phase's own visits
       // begin — its own week, not billed, not counted toward the insurance visit cap.
-      if (phase.freeEventBefore) {
-        week++;
-        if (phase.newMonthHere) monthOff = (4 - ((week - 1) % 4)) % 4;
-        visitNum++;
-        var freeVisit = {
-          visitNum: visitNum, week: week, monthIdx: monthOf(week),
-          isReExam: true, isXray: true, xrayAreas: phase.freeEventAreas || 0,
-          isAnniversary: false, isReport: false, isFreeEvent: true, reEvalUnits: 1
-        };
-        visits.push(freeVisit);
-        lastVisitObj = freeVisit;
-      }
+      // The free exam + x-ray now happen at the FIRST visit back (that visit is also a
+      // normal, billed adjustment) instead of taking a week of their own, so the
+      // post-birth stretch is exactly 4 weeks of 2x/week then 8 weeks of 1x/week.
+      var pendingFreeEvent = !!phase.freeEventBefore;
+      if (phase.freeEventBefore && phase.newMonthHere) monthOff = (4 - (week % 4)) % 4;
 
       // Bonus adjustment-only visits (used by 4x/week "daily" front-loads) share this
       // phase's own first week and don't touch the exam interval at all — the phase's
@@ -1160,24 +1160,29 @@
               isReExam: isReExamHere, isXray: false, xrayAreas: 0,
               isAnniversary: false, isReport: false, reEvalUnits: 1
             };
+            if (pendingFreeEvent) {
+              // first visit back: complimentary exam + x-ray alongside the normal adjustment
+              pendingFreeEvent = false;
+              visitObj.isReExam = true; visitObj.isXray = true; visitObj.xrayAreas = phase.freeEventAreas || 0;
+              visitObj.isFreeEvent = true;
+            }
             visits.push(visitObj);
             lastVisitObj = visitObj;
           }
-        }
-        // Extra adjustment-only visits added to the END of this phase (the pregnancy
-        // plan uses these so mom can keep being adjusted if baby comes after the due
-        // date, without the plan's dates or cost changing). They sit in the phase's
-        // final week and don't affect the exam interval.
-        if (phase.extraEndVisits > 0) {
-          for (var xi = 1; xi <= phase.extraEndVisits; xi++) {
-            visitNum++;
-            var extraVisit = {
-              visitNum: visitNum, week: week, monthIdx: monthOf(week),
-              isReExam: false, isXray: false, xrayAreas: 0,
-              isAnniversary: false, isReport: false, reEvalUnits: 1
-            };
-            visits.push(extraVisit);
-            lastVisitObj = extraVisit;
+          // Pregnancy: the extra "past the due date" visits go one in each of the last two
+          // 4-week blocks before the due date (last week of each block).
+          if (phase.extraEndVisits > 0) {
+            for (var xi = 0; xi < phase.extraEndVisits; xi++) {
+              if (Math.max(1, weeks - 4 * xi) !== w) continue;
+              visitNum++;
+              var extraVisit = {
+                visitNum: visitNum, week: week, monthIdx: monthOf(week),
+                isReExam: false, isXray: false, xrayAreas: 0,
+                isAnniversary: false, isReport: false, reEvalUnits: 1
+              };
+              visits.push(extraVisit);
+              lastVisitObj = extraVisit;
+            }
           }
         }
       }
@@ -1394,13 +1399,12 @@
         if (v.isFreeEvent) {
           if (v.isReExam) { applyLine(cm, 0, 0, 'selfpay', 'free'); cm.reExamCount++; cm.freeReExam++; }
           if (v.isXray) { applyLine(cm, 0, 0, 'selfpay', 'free'); cm.xrayCount++; cm.freeXray++; }
-          cm.selfPayVisits++;
-          return;
+          // the visit's own adjustment is billed normally below (only the exam + x-ray are free)
         }
 
         var mainLines = ['adjustment'];
-        if (v.isReExam) mainLines.push('reexam');
-        if (v.isXray) mainLines.push('xray');
+        if (v.isReExam && !v.isFreeEvent) mainLines.push('reexam');
+        if (v.isXray && !v.isFreeEvent) mainLines.push('xray');
 
         // A visit only counts once toward insurance/self-pay visit totals, no matter how
         // many billing lines (adjustment + re-exam + x-ray) happen on it. The adjustment
@@ -1843,7 +1847,6 @@
     var phaseStarts = [];
     var wkCur = 0;
     state.phases.forEach(function(p) {
-      if (p.freeEventBefore) wkCur++;
       phaseStarts.push(wkCur + 1);
       wkCur += p.totalVisits ? Math.ceil(p.totalVisits / Math.max(1, p.freq)) : (p.weeks || 0);
     });
@@ -1853,11 +1856,11 @@
     var changeNotes = {};
     state.phases.forEach(function(p, pi) {
       if (pi === 0) return;
-      var wk = p.freeEventBefore ? phaseStarts[pi] - 1 : phaseStarts[pi];
+      var wk = phaseStarts[pi];
       var cmHit = plan.coreMonths.filter(function(m) { return wk >= m.weekStart && wk <= m.weekEnd; })[0];
       if (!cmHit) return;
       var txt = p.freeEventBefore
-        ? '▶ Care resumes ' + calDateOfWeek(wk) + ' (post-baby exam + x-ray), then ' + freqLabelOf(p)
+        ? '▶ Care resumes ' + calDateOfWeek(wk) + ': ' + freqLabelOf(p) + ', with the free post-baby exam + x-ray at the first visit'
         : '▶ Frequency change: ' + freqLabelOf(p) + ' begins ' + calDateOfWeek(wk);
       (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push(txt);
     });
@@ -2014,7 +2017,7 @@
     } else {
       html += '<div class="pv-pay-grid">' + corePayBlock() + corePayBlock() + '</div>';
     }
-    html += '<div class="pv-signed-row" style="margin-top:50px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+    html += '<div class="pv-signed-row" style="margin-top:75px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
     html += '</div>'; // .pv-page
 
     // ---- Additional Services page (bolt-ons only) — its own sheet, mirroring the
@@ -2092,7 +2095,7 @@
       }
       if (plan.combinedGrandTotal >= 0.005) html += '<div class="pv-pay-grid">' + payBlock() + payBlock() + '</div>';
 
-      html += '<div class="pv-signed-row" style="margin-top:55px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+      html += '<div class="pv-signed-row" style="margin-top:35px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
 
       html += '</div>'; // .pv-page
 
@@ -2113,7 +2116,7 @@
       html += '<div class="pv-consent-h"><b>ACUPUNCTURE THERAPY INFORMED CONSENT</b>' + ini + '</div>' +
         '<p>I hereby request and consent to the performance of acupuncture treatments. I have been informed that acupuncture may have side effects, including but not limited to bruising, numbness or tingling near the needling sites that may last a few days, with possible dizziness or fainting. I understand that the risk of infection is negligible when all needles are sterile. I will notify the doctor or team if I am or become pregnant.</p>';
       html += '<p class="pv-consent-rule">I have read the above consents and agree to proceed with the recommended treatments for myself or for my dependent(s). I intend this consent form to cover the entire course of treatment for my present condition and for any future condition(s) for which I seek treatment.</p>';
-      html += '<div class="pv-signed-row" style="margin-top:58px;"><div class="pv-line" style="flex:2;">Patient Name</div><div class="pv-line" style="flex:2;">Signature (or Parent/Guardian)</div><div class="pv-line" style="flex:1;">Date</div></div>';
+      html += '<div class="pv-signed-row" style="margin-top:40px;"><div class="pv-line" style="flex:2;">Patient Name</div><div class="pv-line" style="flex:2;">Signature (or Parent/Guardian)</div><div class="pv-line" style="flex:1;">Date</div></div>';
       html += '<div style="margin-top:12px;">Name(s) of Minor Patient(s) in Household:</div><div class="pv-minor-line"></div><div class="pv-minor-line"></div>';
       html += '</div>'; // .pv-page
     }
