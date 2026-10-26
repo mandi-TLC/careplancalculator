@@ -682,6 +682,14 @@
         btn.addEventListener('click', function() { selectPresetVariant(vk); });
         variantRow.appendChild(btn);
       });
+    } else if (state.presetLength === MAINT_KEY) {
+      dueDateRow.innerHTML =
+        '<div class="row"><div><label>Weeks of every-other-week care</label><input type="number" id="maintWeeks" min="2" step="2" value="' + ((state.phases[0] && state.phases[0].weeks) || 48) + '"></div></div>' +
+        '<div class="hint">Defaults to 48 weeks (24 visits, exam at visit 12, anniversary exam + x-ray on the last visit). Change the number of weeks to shorten or lengthen the plan — one visit every 2 weeks.</div>';
+      $('maintWeeks').addEventListener('input', function() {
+        if (state.phases[0]) state.phases[0].weeks = Math.max(0, parseInt(this.value, 10) || 0);
+        renderPhases(); recalc();
+      });
     } else if (state.presetLength === PREGNANCY_KEY) {
       dueDateRow.innerHTML =
         '<div class="row"><div><label>Estimated due date</label><input type="date" id="dueDate" value="' + (state.dueDate || '') + '"></div></div>' +
@@ -729,7 +737,7 @@
           '<div><label>Duration (weeks)</label><input type="number" min="0" step="1" value="' + (phase.weeks != null ? phase.weeks : '') + '" data-idx="' + idx + '" data-field="weeks"' + (phase.totalVisits ? ' placeholder="fixed visit count"' : '') + '></div>' +
           '<div><label>Re-exam every ___ visits (this phase)</label><input type="number" min="0" step="1" value="' + phase.reExamInterval + '" data-idx="' + idx + '" data-field="reExamInterval"></div>' +
         '</div>' +
-        '<label style="display:flex;align-items:center;gap:6px;font-weight:500;margin:2px 0 6px;"><input type="checkbox" style="width:auto;margin:0;" data-eow="' + idx + '"' + (phase.eow ? ' checked' : '') + '> Every other week (1 visit every 2 weeks — duration is in calendar weeks, e.g. 48 weeks = 24 visits)</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-weight:500;margin:2px 0 6px;"><input type="checkbox" style="width:auto;margin:0;" data-eow="' + idx + '"' + (phase.eow ? ' checked' : '') + '> Every other week (1 visit every 2 weeks) — set Duration above to the number of calendar weeks you want, e.g. 24 weeks = 12 visits</label>' +
         (phase.totalVisits ? '<div class="hint">This phase is a fixed ' + phase.totalVisits + '-visit block (part of a 4x/week daily start) rather than a weeks × frequency block.</div>' : '') +
         (phase.bonusAdjustments ? '<div class="hint">Includes ' + phase.bonusAdjustments + ' bonus adjustment visit(s) from the daily front-load, sharing this phase’s first week.</div>' : '');
       container.appendChild(block);
@@ -1878,7 +1886,7 @@
     html += '<div class="pv-disclaimer">' + disclaimerText + '</div>';
 
     html += '<div class="pv-summary-box">';
-    html += '<div class="col"><h4>' + timeframeHead + '</h4>' + (careKind ? '<div>12 Months</div>' : '') + freqRows + '</div>';
+    html += '<div class="col"><h4>' + timeframeHead + '</h4>' + (careKind ? '<div>' + (careKind === 'maint' ? Math.max(1, Math.round(((state.phases[0] && state.phases[0].weeks) || 48) / 4)) : 12) + ' Months</div>' : '') + freqRows + '</div>';
     html += '<div class="col"><h4>Intensity</h4>' +
       (careKind ? '<div><b>4</b> Wellness Workshops (1 per quarter, minimum)</div>' : '') +
       '<div>' + box(true) + ' Re-Evals &amp; Progress Reports: ' + plan.reExamVisitNums.length + ' (incl. anniversary exam)</div>' +
