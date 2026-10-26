@@ -148,18 +148,20 @@
   /* Findings & Recommendations restyled to match the plan pages: same header rule, boxed
      sections with underlined headings, the plan tables' pale blue, same font sizes. */
   /* font sizes match the plan pages (11px body, 14px title, 22px patient name); no side lines */
-  .pv-fr, .pv-fr-preg { font-size: 11px; }
+  .pv-fr, .pv-fr-preg { font-size: 14px; justify-content: flex-start; gap: 14px; }
   .pv-fr .pv-title { font-size: 14px; }
   .pv-fr-sec { border: none; padding: 0; background: none; }
   .pv-fr-sec:nth-child(odd) { background: none; }
-  .pv-fr-h, .pv-fr-preg .pv-fr-h { font-size: 11px; letter-spacing: 0; text-transform: none; text-decoration: underline; margin-bottom: 6px; }
-  .pv-fr .pv-patient-row { margin-bottom: 0; }
-  .pv-fr-basis, .pv-fr-preg .pv-fr-basis { font-size: 11px; gap: 6px 20px; font-weight: 700; }
-  .pv-fr-big { font-size: 11px; }
-  .pv-fr-slot, .pv-fr-preg .pv-fr-slot { font-size: 11px; margin-bottom: 8px; }
-  .pv-fr-note { font-size: 11px; margin-top: 6px; }
-  .pv-fr-prog > div, .pv-fr-preg .pv-fr-prog > div { font-size: 11px; margin-bottom: 10px; line-height: 1.35; }
-  .pv-fr-prog .n { font-size: 11px; min-width: 24px; }
+  .pv-fr-h, .pv-fr-preg .pv-fr-h { font-size: 14px; letter-spacing: 0; text-transform: none; text-decoration: underline; margin-bottom: 4px; }
+  .pv-fr .pv-patient-row { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+  .pv-fr .pv-patient-row .pv-fill { border-bottom: none; }
+  .pv-fr .pv-patient-row .pv-fr-date { font-size: 14px; }
+  .pv-fr-basis, .pv-fr-preg .pv-fr-basis { font-size: 14px; gap: 4px 20px; font-weight: 700; }
+  .pv-fr-big { font-size: 14px; }
+  .pv-fr-slot, .pv-fr-preg .pv-fr-slot { font-size: 14px; margin-bottom: 4px; }
+  .pv-fr-note { font-size: 13px; margin-top: 4px; }
+  .pv-fr-prog > div, .pv-fr-preg .pv-fr-prog > div { font-size: 14px; margin-bottom: 6px; line-height: 1.3; }
+  .pv-fr-prog .n { font-size: 14px; min-width: 24px; }
   .pv-blank { height: 1px; overflow: hidden; color: #fff; font-size: 1px; }
   /* Spreadsheet worksheet prints on its own landscape sheet */
   @page pvsheet { size: landscape; margin: 0.4in; }
@@ -540,12 +542,21 @@
     // with one on its last visit (right before the frequency increases). If it's
     // shorter than that, an exam that soon after the initial exam would be too early,
     // so it is skipped and the exam count starts over at the first 2x/week visit.
+    // Rules: an exam lands on the frequency change (last 1x/week visit) when that is at
+    // least 7 visits after the start; other exams are spaced so the visits in a stretch
+    // divide evenly by the smallest of 8, 9, 10, 11, 12 (falling back to the closest fit
+    // when nothing divides evenly); no exam in the final 4 weeks before the due date.
+    var MIN_GAP = 7;
+    function segmentsFor(span) {
+      for (var d = 8; d <= 12; d++) if (span % d === 0) return span / d;
+      return bestSegments(span);
+    }
     var n1 = phase1Weeks;                         // 1x/week => 1 visit per week
-    var phase1HasExam = n1 >= 8;
+    var phase1HasExam = n1 >= MIN_GAP;
+    var at1 = [];
     if (phase1Weeks > 0) {
-      var at1 = [];
       if (phase1HasExam) {
-        var k1 = bestSegments(n1);
+        var k1 = segmentsFor(n1);
         for (var j1 = 1; j1 <= k1; j1++) at1.push(Math.round(j1 * n1 / k1));
       }
       phases.push({ freq: 1, weeks: phase1Weeks, reExamInterval: 0, examAt: at1 });
@@ -555,14 +566,14 @@
     // she delivers on time, her next payment after the birth is adjusted down.
     if (phase2Weeks > 0) {
       var n2 = phase2Weeks * 2;
-      var offset2 = 0;                             // count restarts at the first 2x/week visit
-      var span2 = offset2 + n2 + EXTRA_LATE_VISITS; // visits from the last exam to the free post-baby exam
-      var k2 = bestSegments(span2) - 1;
-      var at2 = [];
+      var offset2 = 0;                             // the count always restarts at the first 2x/week visit
+      var span2 = offset2 + n2;                    // last exam to the post-baby exam (the "past due" extra visits are ignored)
+      var k2 = segmentsFor(span2) - 1;
+      var lastCap = n2 - 8;                        // nothing in the final 4 weeks (8 regular visits)
+      var at2 = [], prevPos = -offset2;
       for (var j2 = 1; j2 <= k2; j2++) {
-        var pos = Math.round(j2 * span2 / (k2 + 1)) - offset2;
-        pos = Math.min(n2, pos);
-        if (pos >= 1 && at2.indexOf(pos) < 0) at2.push(pos);
+        var pos = Math.min(lastCap, Math.round(j2 * span2 / (k2 + 1)) - offset2);
+        if (pos >= 1 && pos - prevPos >= MIN_GAP) { at2.push(pos); prevPos = pos; }
       }
       phases.push({ freq: 2, weeks: phase2Weeks, reExamInterval: 0, examAt: at2, extraEndVisits: EXTRA_LATE_VISITS });
     }
@@ -1232,6 +1243,20 @@
       }
       for (var tg = phaseStartLen; tg < visits.length; tg++) visits[tg].phaseIdx = phaseI;
     });
+
+    // Pregnancy: no exam in the final 4-period month before the due date. The exam the
+    // spacing rule would put there moves back to the last visit of the month before.
+    if (preBirthWeeks > 0) {
+      var examCutoff = preBirthWeeks - 4, movedExams = 0;
+      visits.forEach(function(v) {
+        if (v.isReExam && !v.isFreeEvent && v.week > examCutoff && v.week <= preBirthWeeks) { v.isReExam = false; movedExams++; }
+      });
+      for (var me = 0; me < movedExams; me++) {
+        var cand = null;
+        visits.forEach(function(v) { if (v.week <= examCutoff && !v.isReExam && !v.isReport && !v.isFreeEvent) cand = v; });
+        if (cand) cand.isReExam = true;
+      }
+    }
 
     if (lastVisitObj) { lastVisitObj.isReExam = true; lastVisitObj.isAnniversary = true; }
 
@@ -2229,7 +2254,7 @@
       html += '<div class="pv-page pv-fr pv-fr-preg">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Findings &amp; Recommendations</span></div>';
       html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
-      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div></div>';
+      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill pv-fr-date">' + (startDateStr || '') + '</span></div></div>';
       html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your best recommendations are based on</div><div class="pv-fr-basis">' +
         contBasis.map(function(t) { return '<div><span class="b">☐</span>' + t + '</div>'; }).join('') + '</div></div>';
       html += '<div class="pv-fr-sec"><div class="pv-fr-big"><span class="pv-fr-blank pv-fr-blank-s">12</span> months of continued corrective chiropractic care</div></div>';
@@ -2268,7 +2293,7 @@
       html += '<div class="pv-page pv-fr' + (isPreg ? ' pv-fr-preg' : '') + '">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Findings &amp; Recommendations</span></div>';
       html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
-      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div></div>';
+      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill pv-fr-date">' + (startDateStr || '') + '</span></div></div>';
       html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your recommendations are based on</div><div class="pv-fr-basis">' +
         basis.map(function(t) { return '<div><span class="b">☐</span>' + t + '</div>'; }).join('') + '</div></div>';
       if (isPreg) {
