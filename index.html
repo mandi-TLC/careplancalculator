@@ -503,7 +503,7 @@
   // Pregnancy: 1x/week until end of 2nd trimester, then 2x/week until the due date,
   // skip 2 weeks, a fully-complimentary post-baby exam + x-ray, 2x/week x2wks,
   // 1x/week x6wks, then the anniversary exam (auto-added, like every other plan).
-  function buildPregnancyPreset(startDateStr, dueDateStr) {
+  function buildPregnancyPreset(startDateStr, dueDateStr, manualExams) {
     var msWeek = 7 * 24 * 60 * 60 * 1000;
     var start = startDateStr ? new Date(startDateStr + 'T00:00:00') : null;
     var due = dueDateStr ? new Date(dueDateStr + 'T00:00:00') : null;
@@ -564,23 +564,26 @@
         var k1 = segmentsFor(n1);
         for (var j1 = 1; j1 <= k1; j1++) at1.push(Math.round(j1 * n1 / k1));
       }
-      phases.push({ freq: 1, weeks: phase1Weeks, reExamInterval: 0, examAt: at1 });
+      phases.push({ freq: 1, weeks: phase1Weeks, reExamInterval: 0, examAt: at1, role: 'pre1' });
     }
     // +2 visits (one extra week's worth) in the final month before the due date, so
     // mom can keep being adjusted if baby comes late without it affecting cost. If
     // she delivers on time, her next payment after the birth is adjusted down.
     if (phase2Weeks > 0) {
       var n2 = phase2Weeks * 2;
-      var offset2 = 0;                             // the count always restarts at the first 2x/week visit
-      var span2 = offset2 + n2;                    // last exam to the post-baby exam (the "past due" extra visits are ignored)
-      var k2 = segmentsFor(span2) - 1;
-      var lastCap = n2 - 8;                        // nothing in the final 4 weeks (8 regular visits)
-      var at2 = [], prevPos = -offset2;
-      for (var j2 = 1; j2 <= k2; j2++) {
-        var pos = Math.min(lastCap, Math.round(j2 * span2 / (k2 + 1)) - offset2);
-        if (pos >= 1 && pos - prevPos >= MIN_GAP) { at2.push(pos); prevPos = pos; }
+      // 3rd-trimester rule: weeks x visits/week, minus the 9 planned visits of the final
+      // month, then split what is left into the most even groups of 8-10 visits. No exam
+      // in the final month; the count always starts at the first 2x/week visit.
+      var base2 = n2 - 9;
+      var at2 = [], prevPos = 0;
+      if (base2 >= MIN_GAP) {
+        var k2 = segmentsFor(base2);
+        for (var j2 = 1; j2 <= k2; j2++) {
+          var pos = Math.round(j2 * base2 / k2);
+          if (pos >= 1 && pos - prevPos >= MIN_GAP) { at2.push(pos); prevPos = pos; }
+        }
       }
-      phases.push({ freq: 2, weeks: phase2Weeks, reExamInterval: 0, examAt: at2, extraEndVisits: EXTRA_LATE_VISITS });
+      phases.push({ freq: 2, weeks: phase2Weeks, reExamInterval: 0, examAt: at2, extraEndVisits: EXTRA_LATE_VISITS, role: 'pre2' });
     }
     // Post-birth: an exam on the 8th visit of the 2x/week stretch (last visit before
     // dropping to 1x/week); the anniversary exam closes out the 1x/week stretch.
@@ -602,7 +605,7 @@
     savingsKey: 'none',
     boltOns: freshBoltOns(),
     txPhase: freshTxPhase(),
-    presetLength: null, presetVariant: null, dueDate: null
+    presetLength: null, presetVariant: null, dueDate: null, pregExams: {}
   };
 
   // ---- care plan preset tree ----
@@ -680,6 +683,10 @@
     var startDateStr = $('startDate').value;
     var built = buildPregnancyPreset(startDateStr, state.dueDate);
     applyPresetPlan(built.plan);
+    // Exams the user picked by hand for a pre-birth phase survive date changes.
+    state.phases.forEach(function(ph) {
+      if (ph.role && state.pregExams && state.pregExams[ph.role]) ph.examAt = state.pregExams[ph.role].slice();
+    });
     state.skipWeeks = state.skipWeeks.filter(function(sw) { return !sw.autoPregnancy; });
     if (built.skipAfterWeek > 0) {
       state.skipWeeks.unshift({
@@ -758,12 +765,56 @@
   }
 
   // ---- phase rows ----
+  // Pregnancy: which plan weeks (before the birth) are lost to office closures, grouped by
+  // phase, so exams can be placed by hand with the missing visits in mind.
+  function pregClosedByPhase() {
+    var out = {}, startStr = $('startDate').value;
+    if (!startStr || state.presetLength !== PREGNANCY_KEY) return out;
+    var ranges = [], cum = 0;
+    state.phases.forEach(function(p) { var w = Math.max(0, p.weeks || 0); ranges.push([cum + 1, cum + w]); cum += w; });
+    resolvedSkipRows(startStr).forEach(function(c) {
+      if (!c.absorbed) return;
+      for (var cw = 1; cw <= c.r.weeksCount; cw++) {
+        var wk = c.r.afterWeek + cw;
+        for (var pi = 0; pi < ranges.length; pi++) {
+          if (wk >= ranges[pi][0] && wk <= ranges[pi][1]) { (out[pi] = out[pi] || []).push(wk); break; }
+        }
+      }
+    });
+    return out;
+  }
+
   function renderPhases() {
     var container = $('phaseRows');
     container.innerHTML = '';
+    var closedMap = pregClosedByPhase();
     state.phases.forEach(function(phase, idx) {
       var block = document.createElement('div');
       block.className = 'block';
+      var examCtl = '<div><label>Re-exam every ___ visits (this phase)</label><input type="number" min="0" step="1" value="' + phase.reExamInterval + '" data-idx="' + idx + '" data-field="reExamInterval"></div>';
+      var examExtra = '';
+      if (phase.role) {
+        var closedHere = closedMap[idx] || [];
+        var visitsHere = Math.max(0, (phase.weeks || 0) - closedHere.length) * Math.max(0, phase.freq || 0);
+        var exs = phase.examAt || [];
+        examCtl = '<div><label>Re-exams during this phase</label><input type="number" min="0" step="1" value="' + exs.length + '" data-pexcount="' + idx + '"></div>';
+        examExtra = '<div class="row">' + exs.map(function(v, k) {
+          return '<div><label>Exam ' + (k + 1) + ' after visit # (of this phase)</label><input type="number" min="1" step="1" value="' + v + '" data-pex="' + idx + '" data-k="' + k + '"></div>';
+        }).join('') + '</div>' +
+          '<div class="hint">This phase has ' + visitsHere + ' visit' + (visitsHere === 1 ? '' : 's') + ' (' + (phase.weeks || 0) + ' weeks at ' + phase.freq + 'x/week' + (closedHere.length ? ', minus ' + closedHere.length + ' closed week' + (closedHere.length === 1 ? '' : 's') : '') + '). Count only the visits that actually happen; the late-baby extra visits are not counted.' +
+          (closedHere.length ? ' <b>Office closed in this phase: week' + (closedHere.length === 1 ? ' ' : 's ') + closedHere.join(', ') + ' of the plan (' + (closedHere.length * phase.freq) + ' visit' + (closedHere.length * phase.freq === 1 ? '' : 's') + ' removed).</b>' : '') +
+          (phase.role === 'pre2' ? (function() {
+            var B = visitsHere - 9, tip = '';
+            if (B >= 7) {
+              var bk = 1, bd = 1e9;
+              for (var kk = 1; kk <= Math.ceil(B / 6); kk++) { var dd = Math.abs(B / kk - 9); if (dd < bd - 1e-9) { bd = dd; bk = kk; } }
+              var ps = []; for (var jj = 1; jj <= bk; jj++) ps.push(Math.round(jj * B / bk));
+              tip = ' Right now: ' + visitsHere + ' − 9 = ' + B + ', split into ' + bk + ' group' + (bk === 1 ? '' : 's') + ' → exam' + (bk === 1 ? '' : 's') + ' after visit' + (bk === 1 ? ' ' : 's ') + ps.join(', ') + '.';
+            }
+            return '<br><b>How to place the 3rd-trimester exams:</b> multiply the weeks by the visits per week, subtract the 9 planned visits of the final month before the due date, then divide what is left into groups of 8, 9 or 10 visits, as evenly as possible. No exam falls in that final month; the next exam is the post-birth one. If a week is closed in this phase, use the reduced visit count shown above.' + tip;
+          })() : '') +
+          ' <button type="button" class="small" data-pexreset="' + idx + '">Reset to automatic</button></div>';
+      }
       block.innerHTML =
         '<div class="block-title"><strong>Phase ' + (idx + 1) + '</strong>' +
           (state.phases.length > 1 ? '<button type="button" class="danger small" data-remove="' + idx + '">Remove</button>' : '') +
@@ -771,18 +822,53 @@
         '<div class="row">' +
           '<div><label>Visits / week</label><input type="number" min="0" step="1" value="' + phase.freq + '" data-idx="' + idx + '" data-field="freq"></div>' +
           '<div><label>Duration (weeks)</label><input type="number" min="0" step="1" value="' + (phase.weeks != null ? phase.weeks : '') + '" data-idx="' + idx + '" data-field="weeks"' + (phase.totalVisits ? ' placeholder="fixed visit count"' : '') + '></div>' +
-          '<div><label>Re-exam every ___ visits (this phase)</label><input type="number" min="0" step="1" value="' + phase.reExamInterval + '" data-idx="' + idx + '" data-field="reExamInterval"></div>' +
-        '</div>' +
-        '<label style="display:flex;align-items:center;gap:6px;font-weight:500;margin:2px 0 6px;"><input type="checkbox" style="width:auto;margin:0;" data-eow="' + idx + '"' + (phase.eow ? ' checked' : '') + '> Every other week (1 visit every 2 weeks) — set Duration above to the number of calendar weeks you want, e.g. 24 weeks = 12 visits</label>' +
+          examCtl +
+        '</div>' + examExtra +
+        (state.presetLength === MAINT_KEY ? '<label style="display:flex;align-items:center;gap:6px;font-weight:500;margin:2px 0 6px;"><input type="checkbox" style="width:auto;margin:0;" data-eow="' + idx + '"' + (phase.eow ? ' checked' : '') + '> Every other week (1 visit every 2 weeks) — set Duration above to the number of calendar weeks you want, e.g. 24 weeks = 12 visits</label>' : '') +
         (phase.totalVisits ? '<div class="hint">This phase is a fixed ' + phase.totalVisits + '-visit block (part of a 4x/week daily start) rather than a weeks × frequency block.</div>' : '') +
         (phase.bonusAdjustments ? '<div class="hint">Includes ' + phase.bonusAdjustments + ' bonus adjustment visit(s) from the daily front-load, sharing this phase’s first week.</div>' : '');
       container.appendChild(block);
     });
-    container.querySelectorAll('input[type=number]').forEach(function(inp) {
+    container.querySelectorAll('input[type=number][data-field]').forEach(function(inp) {
       inp.addEventListener('input', function() {
         var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
         state.phases[idx][field] = +inp.value || 0;
+        // the closed-week / visit-count hints on pregnancy phases depend on weeks & frequency
+        if (state.presetLength === PREGNANCY_KEY && (field === 'freq' || field === 'weeks')) { recalc(); return; }
         recalc();
+      });
+    });
+    // Pregnancy pre-birth phases: choose how many exams and after which visit of the phase.
+    function savePregExams(idx) {
+      var ph = state.phases[idx];
+      state.pregExams = state.pregExams || {};
+      state.pregExams[ph.role] = (ph.examAt || []).slice();
+    }
+    container.querySelectorAll('[data-pexcount]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        var idx = +inp.getAttribute('data-pexcount'), ph = state.phases[idx];
+        var n = Math.max(0, parseInt(inp.value, 10) || 0), cur = (ph.examAt || []).slice();
+        if (n < cur.length) cur = cur.slice(0, n);
+        while (cur.length < n) cur.push((cur.length ? cur[cur.length - 1] : 0) + 9);
+        ph.examAt = cur;
+        savePregExams(idx);
+        renderPhases(); recalc();
+      });
+    });
+    container.querySelectorAll('[data-pex]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var idx = +inp.getAttribute('data-pex'), k = +inp.getAttribute('data-k'), ph = state.phases[idx];
+        ph.examAt[k] = Math.max(0, parseInt(inp.value, 10) || 0);
+        savePregExams(idx);
+        recalc();
+      });
+    });
+    container.querySelectorAll('[data-pexreset]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var ph = state.phases[+btn.getAttribute('data-pexreset')];
+        if (state.pregExams) delete state.pregExams[ph.role];
+        applyPregnancyPreset();
+        renderPhases(); renderXrayPlan(); renderSkipWeeks(); recalc();
       });
     });
     container.querySelectorAll('[data-eow]').forEach(function(cb) {
@@ -904,12 +990,14 @@
           state.skipWeeks[idx].closureEnd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
         if (endInp) endInp.value = state.skipWeeks[idx].closureEnd || '';
+        if (state.presetLength === PREGNANCY_KEY) renderPhases();
         recalc();
       });
     });
     container.querySelectorAll('input[data-field=closureEnd]').forEach(function(inp) {
       inp.addEventListener('change', function() {
         state.skipWeeks[+inp.getAttribute('data-idx')].closureEnd = inp.value || null;
+        if (state.presetLength === PREGNANCY_KEY) renderPhases();
         recalc();
       });
     });
@@ -922,7 +1010,7 @@
     container.querySelectorAll('[data-remove-skip]').forEach(function(btn) {
       btn.addEventListener('click', function() {
         state.skipWeeks.splice(+btn.getAttribute('data-remove-skip'), 1);
-        renderSkipWeeks(); recalc();
+        renderSkipWeeks(); if (state.presetLength === PREGNANCY_KEY) renderPhases(); recalc();
       });
     });
   }
@@ -1214,7 +1302,8 @@
             visitNum++;
             phaseLocalVisit++;
             var isReExamHere = (interval > 0 && (phaseLocalVisit % interval === 0)) ||
-              (phase.examAt && phase.examAt.indexOf(phaseLocalVisit) >= 0);
+              (phase.examAt && phase.examAt.indexOf(phaseLocalVisit) >= 0) ||
+              (phase.examVisitNums && phase.examVisitNums.indexOf(visitNum) >= 0);
             var visitObj = {
               visitNum: visitNum, week: week, monthIdx: monthOf(week),
               isReExam: isReExamHere, isXray: false, xrayAreas: 0,
@@ -1237,7 +1326,7 @@
               visitNum++;
               var extraVisit = {
                 visitNum: visitNum, week: week, monthIdx: monthOf(week),
-                isReExam: false, isXray: false, xrayAreas: 0,
+                isReExam: !!(phase.examVisitNums && phase.examVisitNums.indexOf(visitNum) >= 0), isXray: false, xrayAreas: 0,
                 isAnniversary: false, isReport: false, reEvalUnits: 1
               };
               visits.push(extraVisit);
@@ -1248,20 +1337,6 @@
       }
       for (var tg = phaseStartLen; tg < visits.length; tg++) visits[tg].phaseIdx = phaseI;
     });
-
-    // Pregnancy: no exam in the final 4-period month before the due date. The exam the
-    // spacing rule would put there moves back to the last visit of the month before.
-    if (preBirthWeeks > 0) {
-      var examCutoff = preBirthWeeks - 4, movedExams = 0;
-      visits.forEach(function(v) {
-        if (v.isReExam && !v.isFreeEvent && v.week > examCutoff && v.week <= preBirthWeeks) { v.isReExam = false; movedExams++; }
-      });
-      for (var me = 0; me < movedExams; me++) {
-        var cand = null;
-        visits.forEach(function(v) { if (v.week <= examCutoff && !v.isReExam && !v.isReport && !v.isFreeEvent) cand = v; });
-        if (cand) cand.isReExam = true;
-      }
-    }
 
     if (lastVisitObj) { lastVisitObj.isReExam = true; lastVisitObj.isAnniversary = true; }
 
@@ -2490,7 +2565,7 @@
     state.savingsKey = 'none';
     state.boltOns = freshBoltOns();
     state.txPhase = freshTxPhase();
-    state.presetLength = null; state.presetVariant = null; state.dueDate = null;
+    state.presetLength = null; state.presetVariant = null; state.dueDate = null; state.pregExams = {};
     $('patientName').value = ''; $('startDate').value = '';
     $('insurancePlanName').value = '';
     $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
