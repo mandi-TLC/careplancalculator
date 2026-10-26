@@ -166,7 +166,7 @@
   /* Spreadsheet worksheet prints on its own landscape sheet */
   @page pvsheet { size: landscape; margin: 0.4in; }
   .pv-sheet { page: pvsheet; }
-  .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 2px 4px; }
+  .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 1px 3px; }
   .pv-sheet-table td.ctr, .pv-sheet-table th.ctr { text-align: center; width: 3%; }
   .pv-sheet-table td.nw { white-space: nowrap; }
   .pv-sheet-table td.b { font-weight: 700; }
@@ -1422,6 +1422,9 @@
     // insOwed = what the patient still owes on insurance-billed lines (deductible/copay/
     // coinsurance); kindCash = full fee per line type, both used by the spreadsheet page.
     function applyLine(m, cashFull, owed, bucket, kind) {
+      // The patient never owes more than the office's own fee for a line, even if the
+      // insurance allowed amount entered is higher than the fee.
+      if (bucket === 'insurance' && owed > cashFull) owed = cashFull;
       m.subtotal += cashFull;
       if (bucket === 'insurance') { m.insuranceSavings += (cashFull - owed); m.insOwed += owed; }
       else m.selfPayCash += cashFull;
@@ -2373,7 +2376,7 @@
           }
           if (c.txPhaseCount) L.push(sheetLine(c, 'tx', c.txPhaseCount + ' TX Chair (' + money(CASH.txPhase) + ')'));
         }
-        if (b) BOLT_ON_CATALOG.forEach(function(k) { if (b.counts[k.key]) B.push(sheetLine(b, k.key, b.counts[k.key] + ' ' + k.label)); });
+        if (b) BOLT_ON_CATALOG.forEach(function(k) { if (b.counts[k.key]) B.push(sheetLine(b, k.key, b.counts[k.key] + ' ' + (k.key === 'acupuncture' ? 'Acu' : k.label))); });
         var aF = c ? c.subtotal : 0, bF = b ? b.subtotal : 0;
         var insC = (c ? c.insuranceSavings : 0) + (b ? b.insuranceSavings : 0);
         var savC = (c ? c.selfPaySavings : 0) + (b ? b.selfPaySavings : 0);
@@ -2392,8 +2395,9 @@
             (r === 0 ? '<td class="ctr" rowspan="' + n + '">' + mi + '</td><td class="nw" rowspan="' + n + '">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' : '') +
             '<td>' + (lc ? escapeHtml(lc.label) : '') + '</td>' + cell(cf, lc) +
             '<td>' + (lb ? escapeHtml(lb.label) : '') + '</td>' + cell(bfee, lb) +
-            '<td class="num">' + ((lc || lb) ? money(cf + bfee) : '') + '</td>' +
-            cell((lc ? lc.sav : 0) + (lb ? lb.sav : 0), lc || lb) + cell((lc ? lc.ins : 0) + (lb ? lb.ins : 0), lc || lb) +
+            (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(aF + bF) + '</td>' : '') +
+            cell((lc ? lc.sav : 0) + (lb ? lb.sav : 0), lc || lb) +
+            (r === 0 ? '<td class="num b" rowspan="' + n + '">' + zero(insC) + '</td>' : '') +
             cell(lc ? lc.cop : 0, lc) + cell(lb ? lb.cop : 0, lb) + cell(lc ? lc.self : 0, lc) + cell(lb ? lb.self : 0, lb) +
             (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(owe) + '</td>' : '') + '</tr>';
         }
@@ -2408,7 +2412,7 @@
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
       if (plan.hasFreeEvent) sheetNotes.push('The post-baby evaluation and x-ray are at Dr. Burke\'s expense and not billed to insurance.');
-      var sz = sheetLineCount > 40 ? 7 : (sheetLineCount > 28 ? 8 : 9);
+      var sz = sheetLineCount > 40 ? 6 : (sheetLineCount > 28 ? 6.5 : 7.5);
       html += '<div class="pv-page pv-sheet" style="font-size:' + sz + 'px;">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '" style="max-height:40px;">' : '') + '<span class="pv-title">Care Plan Worksheet — How the Numbers Are Figured</span></div>';
       html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
