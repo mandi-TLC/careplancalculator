@@ -170,7 +170,8 @@
   table.pv-mo-table th, table.pv-mo-table td { padding: 2px 6px; }
   .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 1px 3px; }
   .pv-sheet-table td.ctr, .pv-sheet-table th.ctr { text-align: center; width: 3%; }
-  .pv-sheet-table td.nw { white-space: nowrap; }
+  .pv-sheet-table td { white-space: nowrap; }
+  .pv-sheet-table td.nw { white-space: normal; }
   .pv-sheet-table td.b { font-weight: 700; }
   .pv-sheet-nomo td.ctr, .pv-sheet-nomo th.ctr { display: none; }
   .pv-fchange { font-weight: 700; font-size: 10px; margin-top: 2px; }
@@ -178,13 +179,15 @@
   .pv-sheet-table td, .pv-sheet-table th { overflow: hidden; }
   .pv-sheet-table td.nw { overflow: visible; }
   .pv-sheet-table th { font-size: 0.95em; }
-  .pv-sheet-table th:nth-child(1) { width: 2.5%; } .pv-sheet-table th:nth-child(2) { width: 8%; }
-  .pv-sheet-table th:nth-child(3) { width: 15%; } .pv-sheet-table th:nth-child(4) { width: 6.5%; }
-  .pv-sheet-table th:nth-child(5) { width: 6%; } .pv-sheet-table th:nth-child(6) { width: 6.5%; }
-  .pv-sheet-table th:nth-child(7) { width: 7%; } .pv-sheet-table th:nth-child(8) { width: 6.5%; }
-  .pv-sheet-table th:nth-child(9) { width: 7%; } .pv-sheet-table th:nth-child(10) { width: 7%; }
-  .pv-sheet-table th:nth-child(11) { width: 6.5%; } .pv-sheet-table th:nth-child(12) { width: 7%; }
-  .pv-sheet-table th:nth-child(13) { width: 6.5%; } .pv-sheet-table th:nth-child(14) { width: 7.5%; }
+  .pv-sheet-table td, .pv-sheet-table th { white-space: nowrap; }
+  .pv-sheet-table td.dt { white-space: normal; }
+  .pv-sheet-table th:nth-child(1) { width: 2.5%; } .pv-sheet-table th:nth-child(2) { width: 8.5%; }
+  .pv-sheet-table th:nth-child(3) { width: 10.5%; } .pv-sheet-table th:nth-child(4) { width: 6%; }
+  .pv-sheet-table th:nth-child(5) { width: 7.5%; } .pv-sheet-table th:nth-child(6) { width: 7%; }
+  .pv-sheet-table th:nth-child(7) { width: 7.5%; } .pv-sheet-table th:nth-child(8) { width: 7%; }
+  .pv-sheet-table th:nth-child(9) { width: 7.5%; } .pv-sheet-table th:nth-child(10) { width: 7%; }
+  .pv-sheet-table th:nth-child(11) { width: 7.5%; } .pv-sheet-table th:nth-child(12) { width: 7%; }
+  .pv-sheet-table th:nth-child(13) { width: 7.5%; } .pv-sheet-table th:nth-child(14) { width: 7.5%; }
   /* each month is one boxed group of service lines; no zebra striping inside a group */
   table.pv-table.pv-sheet-table tbody tr:nth-child(odd), table.pv-table.pv-sheet-table tbody tr:nth-child(even) { background: #fff; }
   .pv-sheet-table tbody td { border-top: 1px dotted #aaa; border-bottom: 1px dotted #aaa; }
@@ -2387,23 +2390,23 @@
           // Pregnancy months where the visit frequency changes: adjustments before the change,
           // then any exam, then the adjustments at the new frequency, each on its own line.
           // The post-baby exam + x-ray happen at the first visit back, so they list first.
-          if (c.freeReExam || c.freeXray) L.push(sheetLine(c, 'free', 'Post-baby exam + x-ray (Dr. Burke\'s expense)'));
+          if (c.freeReExam || c.freeXray) L.push(sheetLine(c, 'free', 'Post-baby exam + x-ray'));
           var adjIdxs = Object.keys(c.adjPh || {}).map(Number).sort(function(a, b) { return a - b; });
           var splitAdj = isPregPrint && adjIdxs.length > 1;
           var adjLabel = function(n, pidx, withFreq) {
-            return n + ' Adjustment' + (n === 1 ? '' : 's') + (withFreq ? ' at ' + freqLabelOf(state.phases[pidx] || {}) : '') + ' (' + money(CASH.adjustment) + ' ea)';
+            return n + ' Adj' + (withFreq ? ' at ' + freqLabelOf(state.phases[pidx] || {}) : '');
           };
           if (c.adjCount && !splitAdj) L.push(sheetLine(c, adjIdxs.map(function(i) { return 'adj:' + i; }), adjLabel(c.adjCount, 0, false)));
           if (splitAdj) L.push(sheetLine(c, 'adj:' + adjIdxs[0], adjLabel(c.adjPh[adjIdxs[0]], adjIdxs[0], true)));
           var regRe = c.reExamCount - (c.hasAnniversary ? 1 : 0) - (c.freeReExam || 0);
-          if (regRe > 0) L.push(sheetLine(c, 'reexam', regRe + ' Re-Evaluation' + (regRe === 1 ? '' : 's') + ' (' + money(CASH.reexam) + ')'));
-          if (c.hasAnniversary) L.push(sheetLine(c, 'anniv', 'Anniversary Eval (' + money(CASH.reexam) + ')'));
+          if (regRe > 0) L.push(sheetLine(c, 'reexam', regRe + ' Eval' + (regRe === 1 ? '' : 's')));
+          if (c.hasAnniversary) L.push(sheetLine(c, 'anniv', 'AR'));
           var regX = c.xrayCount - (c.freeXray || 0);
-          if (regX > 0) L.push(sheetLine(c, 'xray', regX + ' Re-X-Ray visit' + (regX === 1 ? '' : 's') + ' (' + money(CASH.xrayPerArea) + '/area)'));
+          if (regX > 0) L.push(sheetLine(c, 'xray', regX + ' X-Ray' + (regX === 1 ? '' : 's')));
           if (splitAdj) {
             for (var ai = 1; ai < adjIdxs.length; ai++) L.push(sheetLine(c, 'adj:' + adjIdxs[ai], adjLabel(c.adjPh[adjIdxs[ai]], adjIdxs[ai], true)));
           }
-          if (c.txPhaseCount) L.push(sheetLine(c, 'tx', c.txPhaseCount + ' TX Chair (' + money(CASH.txPhase) + ')'));
+          if (c.txPhaseCount) L.push(sheetLine(c, 'tx', c.txPhaseCount + ' TX Chair'));
         }
         if (b) BOLT_ON_CATALOG.forEach(function(k) { if (b.counts[k.key]) B.push(sheetLine(b, k.key, b.counts[k.key] + ' ' + (k.key === 'acupuncture' ? 'Acu' : k.label))); });
         var aF = c ? c.subtotal : 0, bF = b ? b.subtotal : 0;
@@ -2421,7 +2424,7 @@
           var cf = lc ? lc.fee : 0, bfee = lb ? lb.fee : 0;
           var cell = function(v, show) { return '<td class="num">' + (show ? zero(v) : '') + '</td>'; };
           sheetRows += '<tr class="' + (r === 0 ? 'mfirst ' : '') + (r === n - 1 ? 'mlast' : '') + '">' +
-            (r === 0 ? '<td class="ctr" rowspan="' + n + '">' + mi + '</td><td class="nw" rowspan="' + n + '">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' : '') +
+            (r === 0 ? '<td class="ctr" rowspan="' + n + '">' + mi + '</td><td class="dt" rowspan="' + n + '">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' : '') +
             '<td>' + (lc ? escapeHtml(lc.label) : '') + '</td>' + cell(cf, lc) +
             '<td>' + (lb ? escapeHtml(lb.label) : '') + '</td>' + cell(bfee, lb) +
             (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(aF + bF) + '</td>' : '') +
@@ -2447,8 +2450,8 @@
       html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
       html += '<table class="pv-table pv-sheet-table' + (isPregPrint ? ' pv-sheet-nomo' : '') + '"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Bolt-On Services</th><th class="num">Bolt-On Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Patient Owes</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Bolt-Ons</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Bolt-Ons</th><th class="num">Ins Contrib</th></tr></thead><tbody>' + sheetRows +
         '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.owe) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.ins) + '</td></tr></tfoot></table>';
-      html += '<div class="pv-footnote" style="font-style:normal;">Patient Owes = Co-pay Chiro + Co-pay Bolt-Ons + Self-pay Chiro + Self-pay Bolt-Ons = Total Fees − Ins Contrib − Savings Amt. ' + sheetNotes.map(escapeHtml).join(' ') + '</div>' +
-        (examVisitText ? '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits:</b> ' + escapeHtml(examVisitText) + '</div>' : '');
+      html += '<div class="pv-footnote" style="font-style:normal;font-size:11px;">Patient Owes =Co-pay Chiro + Co-pay Bolt-Ons + Self-pay Chiro + Self-pay Bolt-Ons = Total Fees − Ins Contrib − Savings Amt. ' + sheetNotes.map(escapeHtml).join(' ') + '</div>' +
+        (examVisitText ? '<div class="pv-footnote" style="font-style:normal;font-size:11px;"><b>Exams planned on visits:</b> ' + escapeHtml(examVisitText) + '</div>' : '');
       html += '</div>'; // .pv-page
     }
 
