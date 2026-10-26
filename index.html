@@ -118,7 +118,7 @@
   table.pv-table td.pv-money-col, table.pv-table th.pv-money-col { width: 13%; }
   table.pv-table td.pv-money-col { white-space: nowrap; }
   table.pv-table tfoot td { font-weight: 700; background: #fff; }
-  .pv-signed-row { display: flex; gap: 40px; margin-top: 55px; }
+  .pv-signed-row { display: flex; gap: 40px; margin-top: 68px; }
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
   .pv-footnote { font-style: italic; color: #333; margin-top: 6px; }
   .pv-page2-img { width: 100%; display: block; }
@@ -126,17 +126,20 @@
   .pv-fr { height: 9.4in; display: flex; flex-direction: column; justify-content: space-between; font-size: 14px; page-break-inside: avoid; }
   .pv-fr .pv-title { font-size: 20px; }
   .pv-fr-sec { border-left: 5px solid #8a8a3c; padding-left: 14px; }
-  .pv-fr-h { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #2f4a2f; margin-bottom: 8px; }
+  .pv-fr-h { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #111; margin-bottom: 8px; }
   .pv-fr-name { font-size: 28px; border-bottom: 1px solid #333; min-height: 36px; padding: 0 4px; }
   .pv-fr-basis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; font-size: 15px; }
-  .pv-fr-big { font-size: 22px; font-weight: 700; color: #2f4a2f; }
+  /* hanging indent: wrapped lines line up with the first line of text, not the bullet */
+  .pv-fr-basis > div { padding-left: 1.4em; text-indent: -1.4em; }
+  .pv-fr-basis .b { display: inline-block; width: 1.4em; text-indent: 0; }
+  .pv-fr-big { font-size: 22px; font-weight: 700; color: #111; }
   .pv-fr-blank { display: inline-block; border-bottom: 1px solid #333; text-align: center; font-weight: 700; color: #111; }
   .pv-fr-blank-s { min-width: 60px; }
   .pv-fr-blank-m { min-width: 60px; }
   .pv-fr-slot { font-size: 18px; margin-bottom: 10px; }
-  .pv-fr-note { font-size: 13px; font-style: italic; color: #333; margin-top: 8px; line-height: 1.4; }
+  .pv-fr-note { font-size: 13px; font-style: italic; color: #111; margin-top: 8px; line-height: 1.4; }
   .pv-fr-prog > div { display: flex; gap: 14px; margin-bottom: 14px; font-size: 14px; line-height: 1.4; }
-  .pv-fr-prog .n { font-size: 24px; font-weight: 700; color: #8a8a3c; min-width: 36px; }
+  .pv-fr-prog .n { font-size: 24px; font-weight: 700; color: #111; min-width: 36px; }
   .pv-fr-preg { font-size: 13px; }
   .pv-fr-preg .pv-fr-basis { font-size: 14px; gap: 6px 20px; }
   .pv-fr-preg .pv-fr-slot { font-size: 16px; margin-bottom: 6px; }
@@ -150,8 +153,24 @@
   .pv-sheet-table td.ctr, .pv-sheet-table th.ctr { text-align: center; width: 3%; }
   .pv-sheet-table td.nw { white-space: nowrap; }
   .pv-sheet-table td.b { font-weight: 700; }
-  .pv-sheet-table th:nth-child(3) { width: 21%; } .pv-sheet-table th:nth-child(5) { width: 11%; }
-  .pv-sheet-table th:nth-child(2) { width: 9%; }
+  .pv-sheet-nomo td.ctr, .pv-sheet-nomo th.ctr { display: none; }
+  .pv-fchange { font-weight: 700; font-size: 10px; margin-top: 2px; }
+  .pv-sheet-table td.num { white-space: nowrap; }
+  .pv-sheet-table td, .pv-sheet-table th { overflow: hidden; }
+  .pv-sheet-table th { font-size: 0.95em; }
+  .pv-sheet-table th:nth-child(1) { width: 3%; } .pv-sheet-table th:nth-child(2) { width: 9%; }
+  .pv-sheet-table th:nth-child(3) { width: 17%; } .pv-sheet-table th:nth-child(4) { width: 6.5%; }
+  .pv-sheet-table th:nth-child(5) { width: 10%; } .pv-sheet-table th:nth-child(6) { width: 6%; }
+  .pv-sheet-table th:nth-child(7) { width: 6.5%; } .pv-sheet-table th:nth-child(8) { width: 6%; }
+  .pv-sheet-table th:nth-child(9) { width: 5.5%; } .pv-sheet-table th:nth-child(10) { width: 5.5%; }
+  .pv-sheet-table th:nth-child(11) { width: 5.5%; } .pv-sheet-table th:nth-child(12) { width: 6.5%; }
+  .pv-sheet-table th:nth-child(13) { width: 5.5%; } .pv-sheet-table th:nth-child(14) { width: 6.5%; }
+  /* each month is one boxed group of service lines; no zebra striping inside a group */
+  table.pv-table.pv-sheet-table tbody tr:nth-child(odd), table.pv-table.pv-sheet-table tbody tr:nth-child(even) { background: #fff; }
+  .pv-sheet-table tbody td { border-top: 1px dotted #aaa; border-bottom: 1px dotted #aaa; }
+  .pv-sheet-table tbody tr.mfirst td { border-top: 2px solid #111; }
+  .pv-sheet-table tbody tr.mlast td { border-bottom: 2px solid #111; }
+  .pv-sheet-table td[rowspan] { vertical-align: middle; background: #f2f1ec; }
   .pv-pay-grid { display: flex; gap: 20px; margin-top: 14px; }
   .pv-pay-block { flex: 1; }
   .pv-pay-head { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; font-weight: 700; align-items: end; margin-bottom: 4px; }
@@ -164,6 +183,10 @@
   .pv-consent ul { margin: 0 0 7px; padding-left: 18px; }
   .pv-consent-h { display: flex; justify-content: space-between; margin: 8px 0 4px; }
   .pv-ini { white-space: nowrap; }
+  /* pale yellow highlight on every spot that needs a signature or initials */
+  .pv-ini, .pv-hl { background: #fff7c4; }
+  .pv-signed-row .pv-line { position: relative; }
+  .pv-signed-row .pv-line::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 36px; background: #fff7c4; }
   .pv-consent-rule { border-top: 1px dashed #333; padding-top: 8px; margin-top: 10px; }
   .pv-minor-line { border-bottom: 1px solid #333; height: 20px; width: 55%; }
 </style>
@@ -450,7 +473,7 @@
   // anniversary exam (the plan's only exam, no x-ray), plus the auto-added report
   // visit = 17 visits total.
   var BABY_PRESET_PLAN = preset([
-    { freq: 2, weeks: 4, reExamInterval: 0 },
+    { freq: 2, weeks: 4, reExamInterval: 0, examAt: [8] },
     { freq: 1, weeks: 8, reExamInterval: 0 }
   ], [], false, 0);
 
@@ -523,7 +546,9 @@
       }
       phases.push({ freq: 2, weeks: phase2Weeks, reExamInterval: 0, examAt: at2, extraEndVisits: EXTRA_LATE_VISITS });
     }
-    phases.push({ freq: 2, weeks: 4, reExamInterval: 0, freeEventBefore: true, freeEventAreas: 2, newMonthHere: true });
+    // Post-birth: an exam on the 8th visit of the 2x/week stretch (last visit before
+    // dropping to 1x/week); the anniversary exam closes out the 1x/week stretch.
+    phases.push({ freq: 2, weeks: 4, reExamInterval: 0, examAt: [8], freeEventBefore: true, freeEventAreas: 2, newMonthHere: true });
     phases.push({ freq: 1, weeks: 8, reExamInterval: 0 });
     return {
       plan: preset(phases, [], false, 0),
@@ -546,6 +571,14 @@
 
   // ---- care plan preset tree ----
   var PREGNANCY_KEY = '__pregnancy__', BABY_KEY = '__baby__', CUSTOM_KEY = '__custom__';
+  var CONTINUED_KEY = '__continued__', MAINT_KEY = '__maint__';
+  // Continued corrective care: 1x/week for 48 weeks, exams every 12 visits (12/24/36 +
+  // the anniversary exam on visit 48), x-rays at exam #2 and the anniversary exam, plus
+  // the auto-added report visit = 49 adjustments, 4 exams, 2 x-rays.
+  var CONTINUED_PRESET_PLAN = preset([{ freq: 1, weeks: 48, reExamInterval: 12 }], [{ reExamNumber: 2, areas: 2 }], true, 2);
+  // Maintenance care: one visit every other week for 48 weeks = 24 visits (exam at visit
+  // 12, anniversary exam + x-ray on visit 24) plus the report visit = 25 adjustments.
+  var MAINT_PRESET_PLAN = preset([{ freq: 1, weeks: 48, reExamInterval: 12, eow: true }], [], true, 2);
   var PRESET_TOP_LEVEL = [
     { key: '4mo', label: '4-Month' },
     { key: '6mo', label: '6-Month' },
@@ -553,6 +586,8 @@
     { key: '12mo', label: '12-Month' },
     { key: BABY_KEY, label: 'Baby (12 weeks)' },
     { key: PREGNANCY_KEY, label: 'Pregnancy' },
+    { key: CONTINUED_KEY, label: 'Continued Care (12 mo)' },
+    { key: MAINT_KEY, label: 'Maintenance (12 mo)' },
     { key: CUSTOM_KEY, label: 'Build my own' }
   ];
 
@@ -570,6 +605,9 @@
     state.presetVariant = null;
     if (key === BABY_KEY) {
       applyPresetPlan(BABY_PRESET_PLAN);
+      state.skipWeeks = state.skipWeeks.filter(function(sw) { return !sw.autoPregnancy; });
+    } else if (key === CONTINUED_KEY || key === MAINT_KEY) {
+      applyPresetPlan(key === MAINT_KEY ? MAINT_PRESET_PLAN : CONTINUED_PRESET_PLAN);
       state.skipWeeks = state.skipWeeks.filter(function(sw) { return !sw.autoPregnancy; });
     } else if (key === CUSTOM_KEY) {
       // leave state.phases/xrayPlan exactly as they are — just exit preset bookkeeping
@@ -691,6 +729,7 @@
           '<div><label>Duration (weeks)</label><input type="number" min="0" step="1" value="' + (phase.weeks != null ? phase.weeks : '') + '" data-idx="' + idx + '" data-field="weeks"' + (phase.totalVisits ? ' placeholder="fixed visit count"' : '') + '></div>' +
           '<div><label>Re-exam every ___ visits (this phase)</label><input type="number" min="0" step="1" value="' + phase.reExamInterval + '" data-idx="' + idx + '" data-field="reExamInterval"></div>' +
         '</div>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-weight:500;margin:2px 0 6px;"><input type="checkbox" style="width:auto;margin:0;" data-eow="' + idx + '"' + (phase.eow ? ' checked' : '') + '> Every other week (1 visit every 2 weeks — duration is in calendar weeks, e.g. 48 weeks = 24 visits)</label>' +
         (phase.totalVisits ? '<div class="hint">This phase is a fixed ' + phase.totalVisits + '-visit block (part of a 4x/week daily start) rather than a weeks × frequency block.</div>' : '') +
         (phase.bonusAdjustments ? '<div class="hint">Includes ' + phase.bonusAdjustments + ' bonus adjustment visit(s) from the daily front-load, sharing this phase’s first week.</div>' : '');
       container.appendChild(block);
@@ -699,6 +738,12 @@
       inp.addEventListener('input', function() {
         var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
         state.phases[idx][field] = +inp.value || 0;
+        recalc();
+      });
+    });
+    container.querySelectorAll('[data-eow]').forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        state.phases[+cb.getAttribute('data-eow')].eow = cb.checked;
         recalc();
       });
     });
@@ -1092,7 +1137,9 @@
       } else {
         for (var w = 1; w <= weeks; w++) {
           week++;
-          for (var v = 1; v <= freq; v++) {
+          // Every-other-week phases (maintenance care) see one visit on weeks 1, 3, 5...
+          var visitsThisWeek = phase.eow ? (w % 2 === 1 ? 1 : 0) : freq;
+          for (var v = 1; v <= visitsThisWeek; v++) {
             visitNum++;
             phaseLocalVisit++;
             var isReExamHere = (interval > 0 && (phaseLocalVisit % interval === 0)) ||
@@ -1147,7 +1194,9 @@
 
     var lastWeek = week;
     visitNum++;
-    var repWeek = lastWeek + 1;
+    var lastPh = state.phases[state.phases.length - 1];
+    // every-other-week plans: the report visit is also two weeks after the last visit
+    var repWeek = (lastPh && lastPh.eow && lastVisitObj) ? Math.max(lastWeek + 1, lastVisitObj.week + 2) : lastWeek + 1;
     // The report visit folds into the same month row as the visit before it,
     // rather than spawning its own trailing month for a single visit.
     var repMonthIdx = lastVisitObj ? lastVisitObj.monthIdx : Math.ceil(repWeek / 4);
@@ -1277,7 +1326,16 @@
       m.subtotal += cashFull;
       if (bucket === 'insurance') { m.insuranceSavings += (cashFull - owed); m.insOwed += owed; }
       else m.selfPayCash += cashFull;
-      if (kind) m.kindCash[kind] = (m.kindCash[kind] || 0) + cashFull;
+      if (kind) {
+        // Per-service-line tallies for the worksheet page: fee, insurance contribution,
+        // patient owes on insurance-billed lines (copay side), and self-pay full fee.
+        m.kindCash[kind] = (m.kindCash[kind] || 0) + cashFull;
+        m.kindIns = m.kindIns || {}; m.kindCopay = m.kindCopay || {}; m.kindSelf = m.kindSelf || {};
+        if (bucket === 'insurance') {
+          m.kindIns[kind] = (m.kindIns[kind] || 0) + (cashFull - owed);
+          m.kindCopay[kind] = (m.kindCopay[kind] || 0) + owed;
+        } else m.kindSelf[kind] = (m.kindSelf[kind] || 0) + cashFull;
+      }
     }
 
     // precompute bolt-on occurrences -> visitNum -> [boltOn indices]
@@ -1323,8 +1381,8 @@
         // complimentary: $0 on every line, no deductible draw, no insurance visit cap
         // consumption, and never billed to insurance at all.
         if (v.isFreeEvent) {
-          if (v.isReExam) { applyLine(cm, 0, 0, 'selfpay'); cm.reExamCount++; cm.freeReExam++; }
-          if (v.isXray) { applyLine(cm, 0, 0, 'selfpay'); cm.xrayCount++; cm.freeXray++; }
+          if (v.isReExam) { applyLine(cm, 0, 0, 'selfpay', 'free'); cm.reExamCount++; cm.freeReExam++; }
+          if (v.isXray) { applyLine(cm, 0, 0, 'selfpay', 'free'); cm.xrayCount++; cm.freeXray++; }
           cm.selfPayVisits++;
           return;
         }
@@ -1391,7 +1449,7 @@
             } else { owed = cashFull; bucket = 'selfpay'; }
             cm.xrayCount++;
           }
-          applyLine(cm, cashFull, owed, bucket, type === 'adjustment' ? 'adj' : (type === 'reexam' ? 'reexam' : 'xray'));
+          applyLine(cm, cashFull, owed, bucket, type === 'adjustment' ? 'adj' : (type === 'reexam' ? (v.isAnniversary ? 'anniv' : 'reexam') : 'xray'));
           if (type === 'adjustment') visitBucket = bucket;
         });
 
@@ -1756,33 +1814,73 @@
     var boltActive = state.boltOns.some(function(b) { return b.active; });
 
     function phaseVisitCount(p) {
-      return (p.totalVisits || (p.freq * (p.weeks || 0))) + (p.bonusAdjustments || 0) + (p.extraEndVisits || 0);
+      var base = p.totalVisits || (p.eow ? Math.ceil((p.weeks || 0) / 2) : p.freq * (p.weeks || 0));
+      return base + (p.bonusAdjustments || 0) + (p.extraEndVisits || 0);
     }
+    // Continued corrective care and maintenance care use their own wording; maintenance
+    // has no Findings & Recommendations page at all.
+    var careKind = state.presetLength === MAINT_KEY ? 'maint' : (state.presetLength === CONTINUED_KEY ? 'cont' : '');
+    var coreTitle = careKind === 'maint' ? 'Recommendations for Maintenance Care'
+      : (careKind === 'cont' ? 'Recommendations for Continued Corrective Care' : 'Recommendations for Initial Intensive Care');
+    var timeframeHead = careKind === 'maint' ? 'Maintenance Care Timeframe' : (careKind === 'cont' ? 'Continued Corrective Care Timeframe' : 'Initial Care Timeframe');
+    var disclaimerText = careKind
+      ? 'Recommendations are based on findings from your anniversary evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.'
+      : 'Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.';
     var totalAdjustments = state.phases.reduce(function(sum, p) { return sum + phaseVisitCount(p); }, 0) + 1; // +1 = the auto-added final report visit
-    var freqRows = state.phases.map(function(p) {
-      var label = p.freq >= 5 ? 'Daily' : (p.freq + 'x/week');
+    var isPregPrint = state.presetLength === PREGNANCY_KEY;
+    // Plan week each phase begins (a free post-baby visit takes the week just before its phase).
+    var phaseStarts = [];
+    var wkCur = 0;
+    state.phases.forEach(function(p) {
+      if (p.freeEventBefore) wkCur++;
+      phaseStarts.push(wkCur + 1);
+      wkCur += p.totalVisits ? Math.ceil(p.totalVisits / Math.max(1, p.freq)) : (p.weeks || 0);
+    });
+    function calDateOfWeek(w) { return startDateStr ? fmtShortDate(addDays(startDateStr, 7 * (calendarWeekIndex(w, skipList) - 1))) : ''; }
+    function freqLabelOf(p) { return p.eow ? '1x every other week' : (p.freq >= 5 ? 'Daily' : (p.freq + 'x/week')); }
+    // Frequency-change markers: month number -> note lines shown inside that month's row.
+    var changeNotes = {};
+    state.phases.forEach(function(p, pi) {
+      if (pi === 0) return;
+      var wk = p.freeEventBefore ? phaseStarts[pi] - 1 : phaseStarts[pi];
+      var cmHit = plan.coreMonths.filter(function(m) { return wk >= m.weekStart && wk <= m.weekEnd; })[0];
+      if (!cmHit) return;
+      var txt = p.freeEventBefore
+        ? '▶ Care resumes ' + calDateOfWeek(wk) + ' (post-baby exam + x-ray), then ' + freqLabelOf(p)
+        : '▶ Frequency change: ' + freqLabelOf(p) + ' begins ' + calDateOfWeek(wk);
+      (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push(txt);
+    });
+    // Planned exam visits, numbered from the first visit of the plan, so nobody has to count.
+    var examVisitText = buildVisits().visits.filter(function(v) { return v.isReExam; }).map(function(v) {
+      var tag = v.isFreeEvent ? ' (free post-baby exam + x-ray)' : (v.isAnniversary ? ' (anniversary exam)' : (v.isXray ? ' (+ x-ray)' : ''));
+      return '#' + v.visitNum + tag;
+    }).join(', ');
+    var freqRows = state.phases.map(function(p, pi) {
+      var label = freqLabelOf(p);
       var span = p.totalVisits ? 'part of a week' : (p.weeks + ' weeks');
       var birthLine = '';
       if (p.freeEventBefore && state.presetLength === PREGNANCY_KEY) {
         var dueD = state.dueDate ? ' ' + fmtShortDate(new Date(state.dueDate + 'T00:00:00')) : '';
         birthLine = '<div style="font-weight:700;">— Baby\'s estimated arrival' + dueD + ' —</div>';
       }
-      return birthLine + '<div>' + label + ' for ' + span + ' — ' + phaseVisitCount(p) + ' adjustments</div>';
+      var fromTxt = startDateStr ? ' (from ' + calDateOfWeek(phaseStarts[pi]) + ')' : '';
+      return birthLine + '<div>' + label + ' for ' + span + ' — ' + phaseVisitCount(p) + ' adjustments' + fromTxt + '</div>';
     }).join('') + '<div>Final report visit — 1 adjustment</div>' + '<div style="margin-top:3px;"><b>TOTAL: ' + totalAdjustments + ' adjustments</b></div>';
 
     var html = '';
     html += '<div class="pv-page">';
 
     html += '<div class="pv-header">';
-    html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Recommendations for Initial Intensive Care</span></div>';
+    html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">' + coreTitle + '</span></div>';
     html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
     html += '</div>';
     html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
-    html += '<div class="pv-disclaimer">Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.</div>';
+    html += '<div class="pv-disclaimer">' + disclaimerText + '</div>';
 
     html += '<div class="pv-summary-box">';
-    html += '<div class="col"><h4>Initial Care Timeframe</h4>' + freqRows + '</div>';
+    html += '<div class="col"><h4>' + timeframeHead + '</h4>' + (careKind ? '<div>12 Months</div>' : '') + freqRows + '</div>';
     html += '<div class="col"><h4>Intensity</h4>' +
+      (careKind ? '<div><b>4</b> Wellness Workshops (1 per quarter, minimum)</div>' : '') +
       '<div>' + box(true) + ' Re-Evals &amp; Progress Reports: ' + plan.reExamVisitNums.length + ' (incl. anniversary exam)</div>' +
       '<div>' + box(anyXray) + ' Re-X-Rays: ' + plan.xrayVisitNums.length + '</div>' +
       '<div>' + box(txActive) + ' Traction (TX Chair)</div>' +
@@ -1793,13 +1891,13 @@
       '<h4 style="margin-top:6px;">Estimated Savings</h4>' +
       '<div>' + box(totalInsuranceSavings > 0) + ' Insurance Contribution: ' + money(totalInsuranceSavings) + '</div>' +
       '<div>' + box(state.savingsKey === 'admin') + ' Administrative Savings</div>' +
-      '<div>' + box(state.savingsKey === '2nd' || state.savingsKey === '3rd' || state.savingsKey === '4th') + ' Family Tiered Savings</div>' +
+      (careKind === 'maint' ? '' : '<div>' + box(state.savingsKey === '2nd' || state.savingsKey === '3rd' || state.savingsKey === '4th') + ' Family Tiered Savings</div>') +
       '<div>' + box(state.savingsKey === 'military') + ' Military Savings</div>' +
       (state.savingsKey === 'carecredit' ? '<div>' + box(true) + ' Care Credit Savings</div>' : '') +
       '</div>';
     html += '</div>';
 
-    html += '<div class="pv-summary-box" style="grid-template-columns:1fr 1fr;">';
+    html += '<div class="pv-summary-box" style="grid-template-columns:1fr 1fr;background:#e7eff5;">';
     html += '<div class="col"><h4>Insurance</h4>' +
       (plan.hasInsurance
         ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') + '</div>' +
@@ -1812,7 +1910,19 @@
     html += '<div class="col"><h4>Savings Program</h4><div>' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '</div></div>';
     html += '</div>';
 
-    html += '<div class="pv-features"><b>Features and Benefits of Initial Intensive Care:</b>' +
+    var contFeatures = careKind === 'cont'
+      ? '<b>Features and Benefits of Continued Corrective Care:</b><ol>' +
+        '<li><b>Each Chiropractic Adjustment</b> builds on the previous, and each visit builds toward a healthier, better aligned and more ideally functioning spinal column.</li>' +
+        '<li><b>Wellness Workshops</b> are in place to further how much you get out of your care and build a foundation on which wiser health care decisions can be pursued. This phase of care requires that you attend at minimum one workshop per quarter.</li>' +
+        '<li><b>Progress evaluations</b> are still performed approximately every 12 visits to measure ongoing results.</li></ol>'
+      : (careKind === 'maint'
+        ? '<b>Features and Benefits of Maintenance Care:</b><ol>' +
+          '<li>Maintenance care means you are working to maintain the progress previously achieved through more intensive care. Each <b>Chiropractic Adjustment</b> builds toward a healthier, better aligned and more ideally functioning spinal column.</li>' +
+          '<li><b>Wellness Workshops</b> are in place to further how much you get out of your care and build a foundation on which wiser health care decisions can be pursued. This phase of care requires that you attend at minimum one workshop per quarter.</li>' +
+          '<li><b>Progress evaluations</b> are still performed approximately every 12 visits to measure your body\'s function and evaluate if your previous progress is truly being maintained.</li></ol>'
+        : '');
+    if (careKind) html += '<div class="pv-features">' + contFeatures + '</div>';
+    else html += '<div class="pv-features"><b>Features and Benefits of Initial Intensive Care:</b>' +
       '<ol>' +
       '<li>Each Chiropractic Adjustment builds on the previous, and each visit builds toward a healthier, better aligned and more ideally functioning spinal column.</li>' +
       '<li>Wellness Workshops are in place to further how much you get out of your care and build a foundation on which wiser health care decisions can be pursued.</li>' +
@@ -1820,17 +1930,22 @@
       '<li>Progress Evaluations are done approximately every 8-10 visits to measure ongoing results, and future care may be adjusted based on outcomes.</li>' +
       '</ol></div>';
 
-    html += '<table class="pv-table"><thead><tr><th class="pv-num-col">#</th><th class="pv-dur-col">Duration</th><th>Chiropractic Services</th><th class="num pv-money-col">Full Estimated Cost</th><th class="num pv-money-col">Insurance Contribution</th><th class="num pv-money-col">Savings</th><th class="num pv-money-col">Estimated Total</th></tr></thead><tbody>';
+    html += '<table class="pv-table"><thead><tr>' + (isPregPrint ? '' : '<th class="pv-num-col">#</th>') + '<th class="pv-dur-col">Duration</th><th>Chiropractic Services</th><th class="num pv-money-col">Full Estimated Cost</th><th class="num pv-money-col">Insurance Contribution</th><th class="num pv-money-col">Savings</th><th class="num pv-money-col">Estimated Total</th></tr></thead><tbody>';
     // Pregnancy plans: a bold divider row marks where baby is expected and care resumes.
     var birthNote = skippedWeekNotes(startDateStr).filter(function(n) { return n.pregnancy; })[0];
     rows.forEach(function(r) {
       var isPostBirth = !!(birthNote && plan.postBirthMonthIdx && r.monthIdx === plan.postBirthMonthIdx);
-      html += '<tr' + (isPostBirth ? ' class="pv-birth-row"' : '') + '><td class="pv-num-col">' + r.monthIdx + '</td><td class="pv-dur-col">' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + '</td>' +
+      var chg = (changeNotes[r.monthIdx] || []).map(function(t) { return '<div class="pv-fchange">' + escapeHtml(t) + '</div>'; }).join('');
+      html += '<tr' + (isPostBirth ? ' class="pv-birth-row"' : '') + '>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + chg + '</td>' +
         '<td class="num pv-money-col">' + money(r.fullCost) + '</td><td class="num pv-money-col">' + (r.insContribution > 0 ? '−' + money(r.insContribution) : money(0)) + '</td>' +
         '<td class="num pv-money-col">' + (r.savings > 0 ? '−' + money(r.savings) : money(0)) + '</td>' +
         '<td class="num pv-money-col">' + money(r.total) + '</td></tr>';
     });
-    html += '</tbody><tfoot><tr><td colspan="3">Estimated Totals</td><td class="num pv-money-col">' + money(totals.fullCost) + '</td><td class="num pv-money-col">' + (totals.insContribution > 0 ? '−' + money(totals.insContribution) : money(0)) + '</td><td class="num pv-money-col">' + (totals.savings > 0 ? '−' + money(totals.savings) : money(0)) + '</td><td class="num pv-money-col">' + money(totals.total) + '</td></tr></tfoot></table>';
+    html += '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Estimated Totals</td><td class="num pv-money-col">' + money(totals.fullCost) + '</td><td class="num pv-money-col">' + (totals.insContribution > 0 ? '−' + money(totals.insContribution) : money(0)) + '</td><td class="num pv-money-col">' + (totals.savings > 0 ? '−' + money(totals.savings) : money(0)) + '</td><td class="num pv-money-col">' + money(totals.total) + '</td></tr></tfoot></table>';
+
+    if (examVisitText) {
+      html += '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits (counted from the first visit of this plan):</b> ' + escapeHtml(examVisitText) + '</div>';
+    }
 
     var skipNotes = skippedWeekNotes(startDateStr);
     var pregNotes = skipNotes.filter(function(n) { return n.pregnancy; });
@@ -1865,21 +1980,30 @@
       return b + '</div>';
     };
     html += '<div class="pv-page pv-consent">';
-    html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Recommendations for Initial Intensive Care</span></div>';
+    html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">' + coreTitle + '</span></div>';
     html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
     html += '<div class="pv-consent-h"><b style="font-size:15px;">Administrative Savings Guidelines:</b><span class="pv-ini">________ Initial</span></div>' +
       '<ul><li>Patient is on a prescribed plan of care, and is in compliance with that plan.</li><li>Appointments for that plan of care are pre-scheduled.</li><li>Payment for services is linked to a credit card securely kept on file and debited automatically on the date(s) selected, in advance of services being rendered.</li></ul>' +
-      '<p>If fewer or more services that anticipated are used during given month, payment will be adjusted to reflect any difference at the next anticipated frequency change. In the unfortunate event that your care here is discontinued, all services rendered to you since your last full monthly payment will be calculated at this practice\'s standard billable amount (without administrative savings). If a credit is present, it will remain on the account for future care. If a refund is requested instead, it will be issued within 30 days. If a balance is due, that amount will be charged to the card on file on the next monthly due date indicated below.</p>' +
+      '<p>Because payments are based on estimated care, your account will be reviewed periodically throughout the course of care. If fewer or more services than anticipated have been used, your payment amount will be adjusted upon that account audit. In the unfortunate event that your care here is discontinued, all services rendered to you since your last full payment will be calculated at this practice\'s standard billable amount (without administrative savings). If a credit is present, it will remain on the account for future care. If a refund is requested instead, it will be issued within 30 days. If a balance is due, that amount will be charged to the card on file on the next scheduled payment date indicated below.</p>' +
       '<div class="pv-consent-h"><b style="font-size:15px;">Signature on File Authorization:</b></div>' +
-      '<p>I, ______________________________, hereby authorize Lifetime Family Wellness to automatically initiate payment to my debit or credit card monthly (or twice monthly if selected) for services and/or products scheduled to be rendered to myself or my family member. I agree that my card will be charged on the ______ day of each month -or- (1<sup>st</sup> and 15<sup>th</sup>) -or- ( _____ and _____ ) for the amounts listed below.</p>' +
-      '<p>I certify that I am an authorized user of this card and will not dispute these transactions with my bank/credit card company, so long as the transactions correspond to the terms indicated in this authorization form. I understand that these amounts are estimated and if fewer or more services are used in any given month, the amount charged the following month will be adjusted to reflect that difference. I understand that I will not be notified of this change prior to the charge happening unless the amount to be charged for that month exceeds the amount listed below by more than $50. I also understand that if I need to change or cancel this automatic draft, I must notify the office in writing 5 business days in advance of the selected date or my card may still be charged. Notice to change or cancel this authorization can be given in person or by mailing to: Lifetime Family Wellness, 5089 Adams Ave, Ogden, UT 84403 or faxing to (866) 479-1660.</p>' +
+      '<p>I, <span class="pv-hl">______________________________</span>, hereby authorize Lifetime Family Wellness to automatically initiate payment to my debit or credit card monthly (or twice monthly if selected) for services and/or products scheduled to be rendered to myself or my family member. I agree that my card will be charged on the <span class="pv-hl">______</span> day of each month -or- (1<sup>st</sup> and 15<sup>th</sup>) -or- ( <span class="pv-hl">_____</span> and <span class="pv-hl">_____</span> ) for the amounts listed below.</p>' +
+      '<p>I certify that I am an authorized user of this card and will not dispute these transactions with my bank/credit card company, so long as the transactions correspond to the terms indicated in this authorization form. I understand these amounts are estimated and, if fewer or more services are used, my payment amount will be adjusted upon account audit throughout the course of my care. I will not be notified before the charge happens unless the amount to be charged exceeds the amount listed below by more than $50. I also understand that if I need to change or cancel this automatic draft, I must notify the office in writing 5 business days in advance of the selected date or my card may still be charged. Notice to change or cancel this authorization can be given in person or by mailing to: Lifetime Family Wellness, 5089 Adams Ave, Ogden, UT 84403 or faxing to (866) 479-1660.</p>' +
+      '<p style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;"><span><b>Card on File Policy:</b> It is the policy of Lifetime Family Wellness to keep a valid credit or debit card on file for every patient, regardless of who is financially responsible for their care, including insurance, auto or injury claims, or any other third-party payer. By initialing, I acknowledge this policy and authorize Lifetime Family Wellness to charge the card on file for fees I am responsible for under office policy, including the $60 missed appointment fee.</span><span class="pv-ini" style="white-space:nowrap;">________ Initial</span></p>' +
       '<div style="display:grid;grid-template-columns:auto auto auto auto 1fr;gap:6px 18px;margin:12px 0;align-items:end;">' +
         '<span>☐ Visa</span><span>☐ MasterCard</span><span>☐ Discover</span><span>☐ AmEx</span><span>Last 4 Digits of Card: ________</span>' +
         '<span style="grid-column:1/3;">Expiration Date: ____ / ____</span><span style="grid-column:3/5;">Security Code: ________</span><span>Billing Zip Code: ________</span>' +
         '<span style="grid-column:1/6;">Card Holder\'s Name: ________________________________________________</span>' +
       '</div>';
-    html += '<div class="pv-pay-grid">' + corePayBlock() + corePayBlock() + '</div>';
-    html += '<div class="pv-signed-row" style="margin-top:30px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+    if (plan.combinedGrandTotal < 0.005) {
+      // Patient owes nothing (e.g. insurance/auto covers everything): no payment grid.
+    } else if (careKind) {
+      // Continued/maintenance care: a single set payment = total plan cost ÷ 11 (care is
+      // planned on a 48-week year), prefilled instead of the monthly payment grid.
+      html += '<div style="margin:16px 0 0;font-size:14px;">Amount: <b style="font-size:20px;border-bottom:1px solid #333;padding:0 14px;">' + money(plan.combinedGrandTotal / 11) + '</b></div>';
+    } else {
+      html += '<div class="pv-pay-grid">' + corePayBlock() + corePayBlock() + '</div>';
+    }
+    html += '<div class="pv-signed-row" style="margin-top:50px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
     html += '</div>'; // .pv-page
 
     // ---- Additional Services page (bolt-ons only) — its own sheet, mirroring the
@@ -1938,14 +2062,14 @@
         acc.fullCost += r.fullCost; acc.insContribution += r.insContribution; acc.savings += r.savings; acc.total += r.total; return acc;
       }, { fullCost: 0, insContribution: 0, savings: 0, total: 0 });
 
-      html += '<table class="pv-table"><thead><tr><th class="pv-num-col">#</th><th class="pv-dur-col">Duration</th><th>Additional Services</th><th class="num pv-money-col">Estimated Cost</th><th class="num pv-money-col">Ins / Other Savings</th><th class="num pv-money-col">Savings</th><th class="num pv-money-col">Estimated Total</th></tr></thead><tbody>';
+      html += '<table class="pv-table"><thead><tr>' + (isPregPrint ? '' : '<th class="pv-num-col">#</th>') + '<th class="pv-dur-col">Duration</th><th>Additional Services</th><th class="num pv-money-col">Estimated Cost</th><th class="num pv-money-col">Ins / Other Savings</th><th class="num pv-money-col">Savings</th><th class="num pv-money-col">Estimated Total</th></tr></thead><tbody>';
       boltRows.forEach(function(r) {
-        html += '<tr><td class="pv-num-col">' + r.monthIdx + '</td><td class="pv-dur-col">' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + '</td>' +
+        html += '<tr>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + '</td>' +
           '<td class="num pv-money-col">' + money(r.fullCost) + '</td><td class="num pv-money-col">' + (r.insContribution > 0 ? '−' + money(r.insContribution) : money(0)) + '</td>' +
           '<td class="num pv-money-col">' + (r.savings > 0 ? '−' + money(r.savings) : money(0)) + '</td>' +
           '<td class="num pv-money-col">' + money(r.total) + '</td></tr>';
       });
-      html += '</tbody><tfoot><tr><td colspan="3">Estimated Totals</td><td class="num pv-money-col">' + money(boltTotals.fullCost) + '</td><td class="num pv-money-col">' + (boltTotals.insContribution > 0 ? '−' + money(boltTotals.insContribution) : money(0)) + '</td><td class="num pv-money-col">' + (boltTotals.savings > 0 ? '−' + money(boltTotals.savings) : money(0)) + '</td><td class="num pv-money-col">' + money(boltTotals.total) + '</td></tr></tfoot></table>';
+      html += '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Estimated Totals</td><td class="num pv-money-col">' + money(boltTotals.fullCost) + '</td><td class="num pv-money-col">' + (boltTotals.insContribution > 0 ? '−' + money(boltTotals.insContribution) : money(0)) + '</td><td class="num pv-money-col">' + (boltTotals.savings > 0 ? '−' + money(boltTotals.savings) : money(0)) + '</td><td class="num pv-money-col">' + money(boltTotals.total) + '</td></tr></tfoot></table>';
 
       html += '<div class="pv-footnote" style="font-style:normal;font-weight:700;margin-top:10px;">Estimated Cost of Entire Recommended Care Plan, including Chiropractic Care and the above-described Additional Services: ' + money(plan.combinedGrandTotal) + '</div>';
 
@@ -1955,9 +2079,9 @@
         for (var i = 0; i < 6; i++) b += '<div class="pv-pay-row"><span class="pv-pay-line"></span><span class="pv-pay-line"></span><span class="pv-pay-or">-or-</span><span class="pv-pay-line"></span><span class="pv-pay-line"></span></div>';
         return b + '</div>';
       }
-      html += '<div class="pv-pay-grid">' + payBlock() + payBlock() + '</div>';
+      if (plan.combinedGrandTotal >= 0.005) html += '<div class="pv-pay-grid">' + payBlock() + payBlock() + '</div>';
 
-      html += '<div class="pv-signed-row" style="margin-top:35px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+      html += '<div class="pv-signed-row" style="margin-top:55px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
 
       html += '</div>'; // .pv-page
 
@@ -1978,7 +2102,7 @@
       html += '<div class="pv-consent-h"><b>ACUPUNCTURE THERAPY INFORMED CONSENT</b>' + ini + '</div>' +
         '<p>I hereby request and consent to the performance of acupuncture treatments. I have been informed that acupuncture may have side effects, including but not limited to bruising, numbness or tingling near the needling sites that may last a few days, with possible dizziness or fainting. I understand that the risk of infection is negligible when all needles are sterile. I will notify the doctor or team if I am or become pregnant.</p>';
       html += '<p class="pv-consent-rule">I have read the above consents and agree to proceed with the recommended treatments for myself or for my dependent(s). I intend this consent form to cover the entire course of treatment for my present condition and for any future condition(s) for which I seek treatment.</p>';
-      html += '<div class="pv-signed-row" style="margin-top:40px;"><div class="pv-line" style="flex:2;">Patient Name</div><div class="pv-line" style="flex:2;">Signature (or Parent/Guardian)</div><div class="pv-line" style="flex:1;">Date</div></div>';
+      html += '<div class="pv-signed-row" style="margin-top:58px;"><div class="pv-line" style="flex:2;">Patient Name</div><div class="pv-line" style="flex:2;">Signature (or Parent/Guardian)</div><div class="pv-line" style="flex:1;">Date</div></div>';
       html += '<div style="margin-top:12px;">Name(s) of Minor Patient(s) in Household:</div><div class="pv-minor-line"></div><div class="pv-minor-line"></div>';
       html += '</div>'; // .pv-page
     }
@@ -1986,7 +2110,32 @@
     // ---- Findings & Recommendations page (one-sided, nothing on the back) ----
     var incFindings = $('incFindings').checked;
     var incSheet = $('incSheet').checked;
-    if (incFindings) {
+    if (incFindings && careKind === 'cont') {
+      // Continued corrective care has its own recommendations page (maintenance has none).
+      var contBasis = ['Exam findings', 'Muscle inhibition', 'Postural imbalances', 'Age', 'Phase of vertebral subluxation degeneration', 'Current level of health', 'Restricted motion in your spine', 'Engagement in previous homework to this point'];
+      var contItems = [
+        ['Your CONTINUED CORRECTIVE CARE will be as follows: 1 visit per week', 'Each adjustment adds to the next, and maintaining this weekly frequency allows your spine to maintain optimal movement and position.'],
+        ['Comparative evaluations – every 12 visits', 'Measure ongoing results, including periodic x-ray re-evaluations.'],
+        ['Cervical extension and low tech rehab on traction chair', 'To continue the education and strengthening of core and key muscle groups of the spine and to further facilitate curvature correction of the spine.'],
+        ['Wellness workshops – attend 2 in the first month of recovery, and one every month thereafter', 'To help educate you in home care. Patients achieve faster, longer results when lifestyle changes are implemented outside the office.'],
+        ['Cervical extension by Denneroll – to be completed daily at home', 'Provides faster results if done faithfully and consistently.']
+      ];
+      html += '<div class="pv-page pv-fr pv-fr-preg">';
+      html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Findings &amp; Recommendations</span></div>';
+      html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
+      html += '<div class="pv-fr-sec"><div class="pv-fr-h">Name</div><div class="pv-fr-name">' + escapeHtml(name) + '</div></div>';
+      html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your best recommendations are based on</div><div class="pv-fr-basis">' +
+        contBasis.map(function(t) { return '<div><span class="b">☐</span>' + t + '</div>'; }).join('') + '</div></div>';
+      html += '<div class="pv-fr-sec"><div class="pv-fr-big"><span class="pv-fr-blank pv-fr-blank-s">12</span> months of continued corrective chiropractic care</div></div>';
+      html += '<div class="pv-fr-sec"><div class="pv-fr-h">Features and benefits of your corrective chiropractic care program and how it works</div><div class="pv-fr-prog">' +
+        contItems.map(function(it, i) { return '<div><span class="n">0' + (i + 1) + '</span><div><b>' + it[0] + '</b><br>' + it[1] + '</div></div>'; }).join('') + '</div></div>';
+      html += '<div class="pv-fr-sec"><div class="pv-fr-h">Goals for care</div><div class="pv-fr-basis">' +
+        ['Improvement in active range of motion', 'Improvement in postural distortions', 'Reduction of edema, hypertonicity and swelling', 'Reduction of pain/discomfort'].map(function(t) { return '<div><span class="b">☐</span>' + t + '</div>'; }).join('') +
+        '<div style="grid-column:1/3;"><span class="b">☐</span>Other: ______________________________________________</div></div></div>';
+      html += '</div>'; // .pv-page
+      if (incSheet) html += '<div class="pv-page pv-blank">&nbsp;</div>';
+    }
+    if (incFindings && !careKind) {
       // Preset plans carry their own month recommendation (4/6/9/12-Month, Baby = 2).
       // Only "Build my own" and Pregnancy are calculated: plan weeks (not counting the
       // report-visit week) in 4-week months, rounded. Closure weeks are NOT counted —
@@ -2015,9 +2164,9 @@
       html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
       html += '<div class="pv-fr-sec"><div class="pv-fr-h">Name</div><div class="pv-fr-name">' + escapeHtml(name) + '</div></div>';
       html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your recommendations are based on</div><div class="pv-fr-basis">' +
-        basis.map(function(t) { return '<div>☐ ' + t + '</div>'; }).join('') + '</div></div>';
+        basis.map(function(t) { return '<div><span class="b">☐</span>' + t + '</div>'; }).join('') + '</div></div>';
       if (isPreg) {
-        var list2 = function(items) { return '<div class="pv-fr-basis">' + items.map(function(t) { return '<div>• ' + t + '</div>'; }).join('') + '</div>'; };
+        var list2 = function(items) { return '<div class="pv-fr-basis">' + items.map(function(t) { return '<div><span class="b">•</span>' + t + '</div>'; }).join('') + '</div>'; };
         html += '<div class="pv-fr-sec"><div class="pv-fr-h">Benefits of chiropractic care during pregnancy</div>' + list2([
           'Less back pain', 'Reduced pelvic and round ligament discomfort', 'Better pelvic alignment and balance', 'Less back labor and shorter labor times',
           'Reduced need for pain medication', 'More comfort while breastfeeding']) + '</div>';
@@ -2057,22 +2206,30 @@
       var sheetRows = '';
       var T = { actual: 0, boltFee: 0, total: 0, ins: 0, sav: 0, cpC: 0, cpB: 0, spC: 0, spB: 0, owe: 0 };
       var zero = function(n) { return n ? money(n) : '—'; };
+      var dPct = (plan.discountPct || 0) / 100;
+      var sheetLineCount = 0;
+      // One printed row per service line within a month (adjustments, exams, x-rays...),
+      // chiropractic lines on the left and bolt-on lines beside them. Each month is boxed
+      // together, and Patient Owes is a single total for the whole month.
+      function sheetLine(m, kind, label) {
+        var fee = (m.kindCash || {})[kind] || 0, ins = (m.kindIns || {})[kind] || 0;
+        var cop = (m.kindCopay || {})[kind] || 0, self = (m.kindSelf || {})[kind] || 0;
+        return { label: label, fee: fee, ins: ins, cop: cop, self: self * (1 - dPct), sav: self * dPct };
+      }
       idxList.forEach(function(mi) {
         var c = coreBy[mi], b = boltBy[mi];
-        var desc = [];
+        var L = [], B = [];
         if (c) {
-          if (c.adjCount) desc.push(c.adjCount + ' Adjustment' + (c.adjCount === 1 ? '' : 's') + ' (' + money(CASH.adjustment) + ' ea)');
+          if (c.adjCount) L.push(sheetLine(c, 'adj', c.adjCount + ' Adjustment' + (c.adjCount === 1 ? '' : 's') + ' (' + money(CASH.adjustment) + ' ea)'));
           var regRe = c.reExamCount - (c.hasAnniversary ? 1 : 0) - (c.freeReExam || 0);
-          if (regRe > 0) desc.push(regRe + ' Re-Evaluation' + (regRe === 1 ? '' : 's') + ' (' + money(CASH.reexam) + ')');
-          if (c.hasAnniversary) desc.push('Anniversary Eval (' + money(CASH.reexam) + ')');
+          if (regRe > 0) L.push(sheetLine(c, 'reexam', regRe + ' Re-Evaluation' + (regRe === 1 ? '' : 's') + ' (' + money(CASH.reexam) + ')'));
+          if (c.hasAnniversary) L.push(sheetLine(c, 'anniv', 'Anniversary Eval (' + money(CASH.reexam) + ')'));
           var regX = c.xrayCount - (c.freeXray || 0);
-          if (regX > 0) desc.push(regX + ' Re-X-Ray visit' + (regX === 1 ? '' : 's') + ' (' + money(CASH.xrayPerArea) + '/area)');
-          if (c.txPhaseCount) desc.push(c.txPhaseCount + ' TX Chair (' + money(CASH.txPhase) + ')');
-          if (c.freeReExam) desc.push(c.freeReExam + ' post-baby exam (no charge)');
-          if (c.freeXray) desc.push('post-baby x-ray (no charge)');
+          if (regX > 0) L.push(sheetLine(c, 'xray', regX + ' Re-X-Ray visit' + (regX === 1 ? '' : 's') + ' (' + money(CASH.xrayPerArea) + '/area)'));
+          if (c.txPhaseCount) L.push(sheetLine(c, 'tx', c.txPhaseCount + ' TX Chair (' + money(CASH.txPhase) + ')'));
+          if (c.freeReExam || c.freeXray) L.push(sheetLine(c, 'free', 'Post-baby exam + x-ray (no charge)'));
         }
-        var boltDesc = [];
-        if (b) BOLT_ON_CATALOG.forEach(function(k) { if (b.counts[k.key]) boltDesc.push(b.counts[k.key] + ' ' + k.label); });
+        if (b) BOLT_ON_CATALOG.forEach(function(k) { if (b.counts[k.key]) B.push(sheetLine(b, k.key, b.counts[k.key] + ' ' + k.label)); });
         var aF = c ? c.subtotal : 0, bF = b ? b.subtotal : 0;
         var insC = (c ? c.insuranceSavings : 0) + (b ? b.insuranceSavings : 0);
         var savC = (c ? c.selfPaySavings : 0) + (b ? b.selfPaySavings : 0);
@@ -2081,12 +2238,21 @@
         var owe = cpC + cpB + spC + spB;
         T.actual += aF; T.boltFee += bF; T.total += aF + bF; T.ins += insC; T.sav += savC; T.cpC += cpC; T.cpB += cpB; T.spC += spC; T.spB += spB; T.owe += owe;
         var wkS = c ? c.weekStart : b.weekStart, wkE = c ? c.weekEnd : b.weekEnd;
-        sheetRows += '<tr><td class="ctr">' + mi + '</td><td class="nw">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' +
-          '<td>' + escapeHtml(desc.join('; ')) + '</td><td class="num">' + zero(aF) + '</td>' +
-          '<td>' + escapeHtml(boltDesc.join('; ')) + '</td><td class="num">' + zero(bF) + '</td><td class="num">' + money(aF + bF) + '</td>' +
-          '<td class="num">' + zero(savC) + '</td><td class="num">' + zero(insC) + '</td>' +
-          '<td class="num">' + zero(cpC) + '</td><td class="num">' + zero(cpB) + '</td><td class="num">' + zero(spC) + '</td><td class="num">' + zero(spB) + '</td>' +
-          '<td class="num b">' + money(owe) + '</td></tr>';
+        var n = Math.max(L.length, B.length, 1);
+        sheetLineCount += n;
+        for (var r = 0; r < n; r++) {
+          var lc = L[r], lb = B[r];
+          var cf = lc ? lc.fee : 0, bfee = lb ? lb.fee : 0;
+          var cell = function(v, show) { return '<td class="num">' + (show ? zero(v) : '') + '</td>'; };
+          sheetRows += '<tr class="' + (r === 0 ? 'mfirst ' : '') + (r === n - 1 ? 'mlast' : '') + '">' +
+            (r === 0 ? '<td class="ctr" rowspan="' + n + '">' + mi + '</td><td class="nw" rowspan="' + n + '">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' : '') +
+            '<td class="nw">' + (lc ? escapeHtml(lc.label) : '') + '</td>' + cell(cf, lc) +
+            '<td class="nw">' + (lb ? escapeHtml(lb.label) : '') + '</td>' + cell(bfee, lb) +
+            '<td class="num">' + ((lc || lb) ? money(cf + bfee) : '') + '</td>' +
+            cell((lc ? lc.sav : 0) + (lb ? lb.sav : 0), lc || lb) + cell((lc ? lc.ins : 0) + (lb ? lb.ins : 0), lc || lb) +
+            cell(lc ? lc.cop : 0, lc) + cell(lb ? lb.cop : 0, lb) + cell(lc ? lc.self : 0, lc) + cell(lb ? lb.self : 0, lb) +
+            (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(owe) + '</td>' : '') + '</tr>';
+        }
       });
       var sheetNotes = [];
       if (plan.hasInsurance) {
@@ -2098,13 +2264,14 @@
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
       if (plan.hasFreeEvent) sheetNotes.push('The post-baby evaluation and x-ray are no charge and not billed to insurance.');
-      var sz = idxList.length > 14 ? 8 : (idxList.length > 9 ? 9 : 10);
+      var sz = sheetLineCount > 40 ? 7 : (sheetLineCount > 28 ? 8 : 9);
       html += '<div class="pv-page pv-sheet" style="font-size:' + sz + 'px;">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '" style="max-height:40px;">' : '') + '<span class="pv-title">Care Plan Worksheet — How the Numbers Are Figured</span></div>';
       html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
-      html += '<table class="pv-table pv-sheet-table"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Bolt-On Services</th><th class="num">Bolt-On Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Ins Contrib</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Bolt-Ons</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Bolt-Ons</th><th class="num">Patient Owes</th></tr></thead><tbody>' + sheetRows +
-        '</tbody><tfoot><tr><td colspan="3">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.ins) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.owe) + '</td></tr></tfoot></table>';
-      html += '<div class="pv-footnote" style="font-style:normal;">Patient Owes = Co-pay Chiro + Co-pay Bolt-Ons + Self-pay Chiro + Self-pay Bolt-Ons = Total Fees − Ins Contrib − Savings Amt. ' + sheetNotes.map(escapeHtml).join(' ') + '</div>';
+      html += '<table class="pv-table pv-sheet-table' + (isPregPrint ? ' pv-sheet-nomo' : '') + '"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Bolt-On Services</th><th class="num">Bolt-On Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Ins Contrib</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Bolt-Ons</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Bolt-Ons</th><th class="num">Patient Owes</th></tr></thead><tbody>' + sheetRows +
+        '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.ins) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.owe) + '</td></tr></tfoot></table>';
+      html += '<div class="pv-footnote" style="font-style:normal;">Patient Owes = Co-pay Chiro + Co-pay Bolt-Ons + Self-pay Chiro + Self-pay Bolt-Ons = Total Fees − Ins Contrib − Savings Amt. ' + sheetNotes.map(escapeHtml).join(' ') + '</div>' +
+        (examVisitText ? '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits:</b> ' + escapeHtml(examVisitText) + '</div>' : '');
       html += '</div>'; // .pv-page
     }
 
