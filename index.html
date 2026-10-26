@@ -95,11 +95,11 @@
   .pv-patient-row { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid #999; padding-bottom: 4px; margin-bottom: 4px; }
   .pv-patient-row > div { flex: 1; display: flex; }
   .pv-fill { flex: 1; border-bottom: 1px solid #999; padding: 0 4px; margin-left: 4px; font-size: 22px; line-height: 1.1; }
-  .pv-disclaimer { color: #333; margin-bottom: 8px; line-height: 1.35; }
-  .pv-summary-box { border: 1px solid #111; padding: 6px 8px; margin-bottom: 8px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
+  .pv-disclaimer { color: #333; margin-bottom: 5px; line-height: 1.3; }
+  .pv-summary-box { border: 1px solid #111; padding: 5px 8px; margin-bottom: 5px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
   .pv-summary-box h4 { margin: 0 0 3px; text-decoration: underline; }
   .pv-summary-box .col > div { margin-bottom: 2px; }
-  .pv-features { margin-bottom: 8px; line-height: 1.3; }
+  .pv-features { margin-bottom: 5px; line-height: 1.25; }
   .pv-features b { font-weight: 700; }
   .pv-features ol { margin: 3px 0 0; padding-left: 16px; }
   /* Fixed layout so all 4 dollar columns can be forced to the same width (based on
@@ -118,14 +118,14 @@
   table.pv-table td.pv-money-col, table.pv-table th.pv-money-col { width: 13%; }
   table.pv-table td.pv-money-col { white-space: nowrap; }
   table.pv-table tfoot td { font-weight: 700; background: #fff; }
-  .pv-signed-row { display: flex; gap: 40px; margin-top: 55px; }
+  .pv-signed-row { display: flex; gap: 40px; margin-top: 44px; }
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
-  .pv-footnote { font-style: italic; color: #333; margin-top: 6px; }
+  .pv-footnote { font-style: italic; color: #333; margin-top: 4px; }
   .pv-page2-img { width: 100%; display: block; }
   /* Findings & Recommendations page: spread to fill the sheet, nothing on the back */
   .pv-fr { height: 9.4in; display: flex; flex-direction: column; justify-content: space-between; font-size: 14px; page-break-inside: avoid; }
   .pv-fr .pv-title { font-size: 20px; }
-  .pv-fr-sec { border-left: 5px solid #8a8a3c; padding-left: 14px; }
+  .pv-fr-sec { border-left: 5px solid #111; padding-left: 14px; }
   .pv-fr-h { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #111; margin-bottom: 8px; }
   .pv-fr-name { font-size: 28px; border-bottom: 1px solid #333; min-height: 36px; padding: 0 4px; }
   .pv-fr-basis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; font-size: 15px; }
@@ -157,10 +157,11 @@
   .pv-fchange { font-weight: 700; font-size: 10px; margin-top: 2px; }
   .pv-sheet-table td.num { white-space: nowrap; }
   .pv-sheet-table td, .pv-sheet-table th { overflow: hidden; }
+  .pv-sheet-table td.nw { overflow: visible; }
   .pv-sheet-table th { font-size: 0.95em; }
-  .pv-sheet-table th:nth-child(1) { width: 3%; } .pv-sheet-table th:nth-child(2) { width: 9%; }
-  .pv-sheet-table th:nth-child(3) { width: 17%; } .pv-sheet-table th:nth-child(4) { width: 6.5%; }
-  .pv-sheet-table th:nth-child(5) { width: 10%; } .pv-sheet-table th:nth-child(6) { width: 6%; }
+  .pv-sheet-table th:nth-child(1) { width: 3%; } .pv-sheet-table th:nth-child(2) { width: 10.5%; }
+  .pv-sheet-table th:nth-child(3) { width: 19.5%; } .pv-sheet-table th:nth-child(4) { width: 6.5%; }
+  .pv-sheet-table th:nth-child(5) { width: 7.5%; } .pv-sheet-table th:nth-child(6) { width: 5.5%; }
   .pv-sheet-table th:nth-child(7) { width: 6.5%; } .pv-sheet-table th:nth-child(8) { width: 6%; }
   .pv-sheet-table th:nth-child(9) { width: 5.5%; } .pv-sheet-table th:nth-child(10) { width: 5.5%; }
   .pv-sheet-table th:nth-child(11) { width: 5.5%; } .pv-sheet-table th:nth-child(12) { width: 6.5%; }
@@ -186,7 +187,7 @@
   /* pale yellow highlight on every spot that needs a signature or initials */
   .pv-ini, .pv-hl { background: #fff7c4; }
   .pv-signed-row .pv-line { position: relative; }
-  .pv-signed-row .pv-line::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 36px; background: #fff7c4; }
+  .pv-signed-row .pv-line::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 34px; background: #fff7c4; }
   .pv-consent-rule { border-top: 1px dashed #333; padding-top: 8px; margin-top: 10px; }
   .pv-minor-line { border-bottom: 1px solid #333; height: 20px; width: 55%; }
 </style>
@@ -486,10 +487,14 @@
     var due = dueDateStr ? new Date(dueDateStr + 'T00:00:00') : null;
     var phase1Weeks = 0, phase2Weeks = 13;
     if (start && due) {
-      var trimester2End = new Date(due.getTime() - 13 * msWeek);
-      var phase2Start = trimester2End.getTime() > start.getTime() ? trimester2End : start;
-      phase1Weeks = Math.max(0, Math.round((phase2Start.getTime() - start.getTime()) / msWeek));
-      phase2Weeks = Math.max(0, Math.round((due.getTime() - phase2Start.getTime()) / msWeek));
+      // Pre-birth care is a run of 7-day periods counted BACK from the due date (the last
+      // period ends on the due date), back to the plan start date; the first period may
+      // be partial. The last 13 periods are the 3rd trimester (2x/week); any before that
+      // are 1x/week.
+      var daysInc = Math.round((due.getTime() - start.getTime()) / 86400000) + 1;
+      var P = daysInc >= 1 ? Math.ceil(daysInc / 7) : 0;
+      phase2Weeks = Math.min(13, P);
+      phase1Weeks = P - phase2Weeks;
     }
     var phases = [];
     // Exams for pregnancy are spaced as evenly as possible at ~8-10 visits apart
@@ -693,7 +698,7 @@
     } else if (state.presetLength === PREGNANCY_KEY) {
       dueDateRow.innerHTML =
         '<div class="row"><div><label>Estimated due date</label><input type="date" id="dueDate" value="' + (state.dueDate || '') + '"></div></div>' +
-        '<div class="hint">1x/week until the end of the 2nd trimester, then 2x/week until the due date. Pre-birth 4-week months are counted back from the due date (a short first month absorbs any leftover weeks), and one extra visit is built into each of the last two 4-week months before the due date in case baby comes late. A recovery break of up to 2 weeks starts at the due date (it stays fixed to the due date even if other closures are added), then 2x/week for 4 weeks (the first visit back includes a complimentary post-baby exam + x-ray, and an exam on the 8th visit), 1x/week for 8 weeks, and the anniversary exam. Set the plan start date above and the due date here.</div>';
+        '<div class="hint">1x/week until the end of the 2nd trimester, then 2x/week until the due date. Pre-birth care is counted in 7-day periods back from the due date (the last period ends on the due date; the first period may be partial), in 4-period months (leftover periods go to the first month: 1-2 leftover weeks are folded into it, 3 make a short first month). An office closure before the birth removes that week's visits and shifts nothing, and one extra visit is built into each of the last two 4-week months before the due date in case baby comes late. A recovery break of up to 2 weeks starts at the due date (it stays fixed to the due date even if other closures are added), then 2x/week for 4 weeks (the first visit back includes the post-baby exam + x-ray at Dr. Burke\'s expense, and an exam on the 8th visit), 1x/week for 8 weeks, and the anniversary exam. Set the plan start date above and the due date here.</div>';
       $('dueDate').addEventListener('input', function() {
         state.dueDate = this.value;
         applyPregnancyPreset();
@@ -1087,16 +1092,38 @@
     // (the pregnancy plan's post-birth restart) begins a fresh month at that point, so
     // pre-birth and post-birth care never share a table row.
     var monthOff = 0;
-    function monthOf(w) { return Math.ceil((w + monthOff) / 4); }
-    // Pregnancy: pre-birth 4-week blocks are counted BACK from the due date, so the last
-    // block always ends at the due date and any partial block lands at the very start
-    // of the plan (a short first month) instead of at the end.
+    // Pregnancy: pre-birth 4-week blocks are counted BACK from the due-date week, so the
+    // last pre-birth block always ends with the due-date week and any leftover weeks land
+    // at the very start of the plan. A leftover of 1-2 weeks is folded into the first
+    // block (a 5-6 week first month); 3 leftover weeks stay as their own short first month.
+    var preBirthWeeks = 0, stubWeeks = 0, mergeStub = false;
     for (var pi0 = 0, preWeeks = 0; pi0 < state.phases.length; pi0++) {
-      if (state.phases[pi0].freeEventBefore) { if (pi0 > 0) monthOff = (4 - (preWeeks % 4)) % 4; break; }
+      if (state.phases[pi0].freeEventBefore) { if (pi0 > 0) preBirthWeeks = preWeeks; break; }
       preWeeks += Math.max(0, state.phases[pi0].weeks || 0);
     }
+    if (preBirthWeeks > 0) { stubWeeks = preBirthWeeks % 4; mergeStub = stubWeeks > 0 && stubWeeks <= 2 && preBirthWeeks > 4; }
+    function monthOf(w) {
+      if (preBirthWeeks > 0) {
+        if (w > preBirthWeeks) return monthOf(preBirthWeeks) + Math.ceil((w - preBirthWeeks) / 4);
+        if (mergeStub) return w <= stubWeeks + 4 ? 1 : 1 + Math.ceil((w - stubWeeks - 4) / 4);
+        return Math.ceil((w + ((4 - stubWeeks) % 4)) / 4);
+      }
+      return Math.ceil((w + monthOff) / 4);
+    }
 
-    state.phases.forEach(function(phase) {
+    // Pregnancy: an office closure that falls BEFORE the due-date break doesn't push any
+    // dates (the plan is anchored to the due date), so the visits in those closed weeks
+    // simply don't happen — they come out of the visit counts and cost.
+    var closedWeeks = {};
+    if (preBirthWeeks > 0 && $('startDate').value) {
+      resolvedSkipRows($('startDate').value).forEach(function(c) {
+        if (!c.absorbed) return;
+        for (var cw = 1; cw <= c.r.weeksCount; cw++) closedWeeks[c.r.afterWeek + cw] = true;
+      });
+    }
+
+    state.phases.forEach(function(phase, phaseI) {
+      var phaseStartLen = visits.length;
       var freq = Math.max(0, phase.freq || 0);
       var weeks = Math.max(0, phase.weeks || 0);
       var interval = Math.max(0, phase.reExamInterval || 0);
@@ -1150,6 +1177,8 @@
           week++;
           // Every-other-week phases (maintenance care) see one visit on weeks 1, 3, 5...
           var visitsThisWeek = phase.eow ? (w % 2 === 1 ? 1 : 0) : freq;
+          var weekClosed = !!closedWeeks[week];
+          if (weekClosed) visitsThisWeek = 0;
           for (var v = 1; v <= visitsThisWeek; v++) {
             visitNum++;
             phaseLocalVisit++;
@@ -1173,7 +1202,7 @@
           // 4-week blocks before the due date (last week of each block).
           if (phase.extraEndVisits > 0) {
             for (var xi = 0; xi < phase.extraEndVisits; xi++) {
-              if (Math.max(1, weeks - 4 * xi) !== w) continue;
+              if (Math.max(1, weeks - 4 * xi) !== w || weekClosed) continue;
               visitNum++;
               var extraVisit = {
                 visitNum: visitNum, week: week, monthIdx: monthOf(week),
@@ -1186,6 +1215,7 @@
           }
         }
       }
+      for (var tg = phaseStartLen; tg < visits.length; tg++) visits[tg].phaseIdx = phaseI;
     });
 
     if (lastVisitObj) { lastVisitObj.isReExam = true; lastVisitObj.isAnniversary = true; }
@@ -1633,6 +1663,18 @@
     return d;
   }
   function fmtShortDate(d) { return (d.getMonth() + 1) + '/' + d.getDate(); }
+  function toISODate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  // Pregnancy plans: the pre-birth 7-day periods are counted BACK from the due date
+  // (the last period ends ON the due date), so the date grid is anchored to the due date,
+  // not the start date. Returns the first day of period 1 (on or up to 6 days before the
+  // real start date; the first printed row is clamped to the real start). For every other
+  // plan it just returns the start date. Safe to apply twice.
+  function gridStartFor(startStr) {
+    if (!startStr || state.presetLength !== PREGNANCY_KEY || !state.dueDate) return startStr;
+    var days = Math.round((new Date(state.dueDate + 'T00:00:00') - new Date(startStr + 'T00:00:00')) / 86400000) + 1;
+    if (days < 1) return startStr;
+    return toISODate(addDays(state.dueDate, -(7 * Math.ceil(days / 7) - 1)));
+  }
   // Which of the plan's own rolling weeks (1-based, before any pushing) a real
   // calendar date falls into.
   function weekIndexForDate(dateStr, startDateStr) {
@@ -1675,6 +1717,7 @@
   // is subtracted before converting to a plan week. A one-week (Mon–Fri) closure is
   // always a one-week push, anchored to whichever plan week holds most of its days.
   function resolvedSkipRows(startDateStr) {
+    startDateStr = gridStartFor(startDateStr);
     var items = [];
     state.skipWeeks.forEach(function(sw) {
       if (sw.afterWeek != null) {
@@ -1725,7 +1768,10 @@
   }
   function calendarRangeForWeeks(weekStart, weekEnd, startDateStr, skipList) {
     if (!startDateStr) return '___ / ___ to ___ / ___';
+    var realStart = new Date(startDateStr + 'T00:00:00');
+    startDateStr = gridStartFor(startDateStr);
     var startD = addDays(startDateStr, 7 * (calendarWeekIndex(weekStart, skipList) - 1));
+    if (startD < realStart) startD = realStart; // first period can begin mid-period (pregnancy)
     var endD = addDays(startDateStr, 7 * (calendarWeekIndex(weekEnd, skipList) - 1) + 6);
     return fmtShortDate(startD) + ' to ' + fmtShortDate(endD);
   }
@@ -1735,6 +1781,7 @@
   // week, the one listed first closes first.
   function skippedWeekNotes(startDateStr) {
     if (!startDateStr || !state.skipWeeks.length) return [];
+    startDateStr = gridStartFor(startDateStr);
     var configured = resolvedSkipRows(startDateStr);
     return configured.map(function(c, i) {
       var sw = c.sw, n = c.r.weeksCount, aw = c.r.afterWeek;
@@ -1762,7 +1809,7 @@
       if (sw.autoPregnancy) {
         // The post-birth recovery break is not an office closure — it's a flexible
         // window for mom, so it gets its own wording.
-        return { pregnancy: true, range: range, text: 'We are happy to adjust mom again as soon as she is comfortable doing so following birth. We have built in a maximum break of ' + (n > 1 ? n + ' weeks' : 'one week') + ' (' + range + ') to accommodate that, but should mom decide to return to care before the end of that break, she is welcome to. The dates of the remaining weeks of care will be adjusted accordingly, but the cost of that care will not change unless mom requests additional visits during that time.' };
+        return { pregnancy: true, range: range, text: 'We are happy to adjust mom again as soon as she is comfortable after birth. We have built in a break of up to ' + (n > 1 ? n + ' weeks' : 'one week') + ' (' + range + '); she is welcome to return sooner, and the remaining dates will adjust accordingly.' };
       }
       return { pregnancy: false, text: 'Office closed ' + weekWord + ' of ' + range + (sw.reason ? ' (' + sw.reason + ')' : '') + ' — no visits then; all visit dates after have been shifted out accordingly.' };
     });
@@ -1771,7 +1818,7 @@
   // can double-check a closure landed where you expected.
   function renderWeekCalendar(plan) {
     var box = $('weekCalendarBox');
-    var startDateStr = $('startDate').value;
+    var startDateStr = gridStartFor($('startDate').value);
     if (!startDateStr || !plan || !plan.totalWeeks) { box.innerHTML = ''; return; }
     var skipList = parseSkipWeeks();
     var chips = [];
@@ -1841,7 +1888,10 @@
     var disclaimerText = careKind
       ? 'Recommendations are based on findings from your anniversary evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.'
       : 'Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.';
-    var totalAdjustments = state.phases.reduce(function(sum, p) { return sum + phaseVisitCount(p); }, 0) + 1; // +1 = the auto-added final report visit
+    // Real visit counts per phase (visits lost to pregnancy-plan closures already removed)
+    var builtVisitsAll = buildVisits().visits;
+    function phaseActualCount(pi) { return builtVisitsAll.filter(function(v) { return v.phaseIdx === pi; }).length; }
+    var totalAdjustments = state.phases.reduce(function(sum, p, pi) { return sum + phaseActualCount(pi); }, 0) + 1; // +1 = the auto-added final report visit
     var isPregPrint = state.presetLength === PREGNANCY_KEY;
     // Plan week each phase begins (a free post-baby visit takes the week just before its phase).
     var phaseStarts = [];
@@ -1850,7 +1900,12 @@
       phaseStarts.push(wkCur + 1);
       wkCur += p.totalVisits ? Math.ceil(p.totalVisits / Math.max(1, p.freq)) : (p.weeks || 0);
     });
-    function calDateOfWeek(w) { return startDateStr ? fmtShortDate(addDays(startDateStr, 7 * (calendarWeekIndex(w, skipList) - 1))) : ''; }
+    function calDateOfWeek(w) {
+      if (!startDateStr) return '';
+      var d = addDays(gridStartFor(startDateStr), 7 * (calendarWeekIndex(w, skipList) - 1));
+      var rs = new Date(startDateStr + 'T00:00:00');
+      return fmtShortDate(d < rs ? rs : d);
+    }
     function freqLabelOf(p) { return p.eow ? '1x every other week' : (p.freq >= 5 ? 'Daily' : (p.freq + 'x/week')); }
     // Frequency-change markers: month number -> note lines shown inside that month's row.
     var changeNotes = {};
@@ -1860,13 +1915,13 @@
       var cmHit = plan.coreMonths.filter(function(m) { return wk >= m.weekStart && wk <= m.weekEnd; })[0];
       if (!cmHit) return;
       var txt = p.freeEventBefore
-        ? '▶ Care resumes ' + calDateOfWeek(wk) + ': ' + freqLabelOf(p) + ', with the free post-baby exam + x-ray at the first visit'
-        : '▶ Frequency change: ' + freqLabelOf(p) + ' begins ' + calDateOfWeek(wk);
+        ? '▶ Care resumes at ' + freqLabelOf(p) + ' (first visit includes exam + x-ray)'
+        : '▶ Frequency change: ' + freqLabelOf(p) + ' begins';
       (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push(txt);
     });
     // Planned exam visits, numbered from the first visit of the plan, so nobody has to count.
-    var examVisitText = buildVisits().visits.filter(function(v) { return v.isReExam; }).map(function(v) {
-      var tag = v.isFreeEvent ? ' (free post-baby exam + x-ray)' : (v.isAnniversary ? ' (anniversary exam)' : (v.isXray ? ' (+ x-ray)' : ''));
+    var examVisitText = builtVisitsAll.filter(function(v) { return v.isReExam; }).map(function(v) {
+      var tag = v.isFreeEvent ? ' (post-baby exam + x-ray at Dr. Burke\'s expense)' : (v.isAnniversary ? ' (anniversary exam)' : (v.isXray ? ' (+ x-ray)' : ''));
       return '#' + v.visitNum + tag;
     }).join(', ');
     var freqRows = state.phases.map(function(p, pi) {
@@ -1877,8 +1932,8 @@
         var dueD = state.dueDate ? ' ' + fmtShortDate(new Date(state.dueDate + 'T00:00:00')) : '';
         birthLine = '<div style="font-weight:700;">— Baby\'s estimated arrival' + dueD + ' —</div>';
       }
-      var fromTxt = startDateStr ? ' (from ' + calDateOfWeek(phaseStarts[pi]) + ')' : '';
-      return birthLine + '<div>' + label + ' for ' + span + ' — ' + phaseVisitCount(p) + ' adjustments' + fromTxt + '</div>';
+      var fromTxt = '';
+      return birthLine + '<div>' + label + ' for ' + span + ' — ' + phaseActualCount(pi) + ' adjustments' + fromTxt + '</div>';
     }).join('') + '<div>Final report visit — 1 adjustment</div>' + '<div style="margin-top:3px;"><b>TOTAL: ' + totalAdjustments + ' adjustments</b></div>';
 
     var html = '';
@@ -1973,11 +2028,11 @@
     }
     if (closureNotes.length) {
       html += '<div class="pv-footnote">' + closureNotes.map(function(n) { return escapeHtml(n.text); }).join('<br>') +
-        '<br>The total amount of recommended care above is unchanged — the same number of visits, re-evals, and x-rays still happen; only the calendar dates shift to account for the closure(s) noted.</div>';
+        '<br>Total visits, re-evals, and x-rays are unchanged; only the calendar dates shift.</div>';
     }
 
     if (plan.hasFreeEvent) {
-      html += '<div class="pv-footnote">The post-baby evaluation and x-ray included in this plan are provided at no charge and are not billed to insurance.</div>';
+      html += '<div class="pv-footnote">The post-baby evaluation and x-ray in this plan are provided at Dr. Burke\'s expense and are not billed to insurance.</div>';
     }
 
     html += '<div class="pv-footnote">This is purely an estimation for care and timeframe. This is subject to updates based on your rate of progress and participation in homework. Re-evaluations are marking points for updates in care only if applicable.</div>';
@@ -2241,7 +2296,7 @@
           var regX = c.xrayCount - (c.freeXray || 0);
           if (regX > 0) L.push(sheetLine(c, 'xray', regX + ' Re-X-Ray visit' + (regX === 1 ? '' : 's') + ' (' + money(CASH.xrayPerArea) + '/area)'));
           if (c.txPhaseCount) L.push(sheetLine(c, 'tx', c.txPhaseCount + ' TX Chair (' + money(CASH.txPhase) + ')'));
-          if (c.freeReExam || c.freeXray) L.push(sheetLine(c, 'free', 'Post-baby exam + x-ray (no charge)'));
+          if (c.freeReExam || c.freeXray) L.push(sheetLine(c, 'free', 'Post-baby exam + x-ray (Dr. Burke\'s expense)'));
         }
         if (b) BOLT_ON_CATALOG.forEach(function(k) { if (b.counts[k.key]) B.push(sheetLine(b, k.key, b.counts[k.key] + ' ' + k.label)); });
         var aF = c ? c.subtotal : 0, bF = b ? b.subtotal : 0;
@@ -2260,8 +2315,8 @@
           var cell = function(v, show) { return '<td class="num">' + (show ? zero(v) : '') + '</td>'; };
           sheetRows += '<tr class="' + (r === 0 ? 'mfirst ' : '') + (r === n - 1 ? 'mlast' : '') + '">' +
             (r === 0 ? '<td class="ctr" rowspan="' + n + '">' + mi + '</td><td class="nw" rowspan="' + n + '">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' : '') +
-            '<td class="nw">' + (lc ? escapeHtml(lc.label) : '') + '</td>' + cell(cf, lc) +
-            '<td class="nw">' + (lb ? escapeHtml(lb.label) : '') + '</td>' + cell(bfee, lb) +
+            '<td>' + (lc ? escapeHtml(lc.label) : '') + '</td>' + cell(cf, lc) +
+            '<td>' + (lb ? escapeHtml(lb.label) : '') + '</td>' + cell(bfee, lb) +
             '<td class="num">' + ((lc || lb) ? money(cf + bfee) : '') + '</td>' +
             cell((lc ? lc.sav : 0) + (lb ? lb.sav : 0), lc || lb) + cell((lc ? lc.ins : 0) + (lb ? lb.ins : 0), lc || lb) +
             cell(lc ? lc.cop : 0, lc) + cell(lb ? lb.cop : 0, lb) + cell(lc ? lc.self : 0, lc) + cell(lb ? lb.self : 0, lb) +
@@ -2277,7 +2332,7 @@
         sheetNotes.push('Ins Contrib = fees insurance picks up. Co-pay columns = what the patient still owes on insurance-billed visits (deductible, copay, coinsurance).');
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
-      if (plan.hasFreeEvent) sheetNotes.push('The post-baby evaluation and x-ray are no charge and not billed to insurance.');
+      if (plan.hasFreeEvent) sheetNotes.push('The post-baby evaluation and x-ray are at Dr. Burke\'s expense and not billed to insurance.');
       var sz = sheetLineCount > 40 ? 7 : (sheetLineCount > 28 ? 8 : 9);
       html += '<div class="pv-page pv-sheet" style="font-size:' + sz + 'px;">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '" style="max-height:40px;">' : '') + '<span class="pv-title">Care Plan Worksheet — How the Numbers Are Figured</span></div>';
