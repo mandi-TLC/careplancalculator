@@ -256,15 +256,14 @@
     </div>
 
     <div class="card">
-      <h2>Actions</h2>
-      <div class="checkbox-row"><input type="checkbox" id="incFindings" checked><label for="incFindings">Include the Findings &amp; Recommendations page when printing (one-sided, nothing on the back)</label></div>
-      <div class="checkbox-row"><input type="checkbox" id="incSheet" checked><label for="incSheet">Include the spreadsheet-style financial breakdown page when printing (its own sheet, nothing on the back)</label></div>
-      <div class="btn-bar">
-        <button type="button" id="newPatientBtn" class="secondary">New patient (reset everything)</button>
-        <button type="button" id="copyBtn" class="secondary">Copy plan as text</button>
-        <button type="button" id="printBtn" class="secondary">Print</button>
+      <h2>SAVINGS</h2>
+      <div class="hint">Click the plan that applies. Percentages are what the patient is responsible for (not the discount). Savings only apply to self-pay charges — never to anything insurance is covering.</div>
+      <div class="savings-grid" id="savingsGrid"></div>
+      <div class="insurance-sub">
+        <div class="checkbox-row"><input type="checkbox" id="incDenneroll"><label for="incDenneroll">Recommend a Denneroll (spinal orthotic pillow) — $64.35 with tax, quantity 1. Prints on the Findings &amp; Recommendations page only; not part of any month or total.</label></div>
       </div>
     </div>
+
   </div>
 
   <div>
@@ -347,14 +346,6 @@
       </table>
     </div>
 
-    <div class="card">
-      <h2>SAVINGS</h2>
-      <div class="hint">Click the plan that applies. Percentages are what the patient is responsible for (not the discount). Savings only apply to self-pay charges — never to anything insurance is covering.</div>
-      <div class="savings-grid" id="savingsGrid"></div>
-      <div class="insurance-sub">
-        <div class="checkbox-row"><input type="checkbox" id="incDenneroll"><label for="incDenneroll">Recommend a Denneroll (spinal orthotic pillow) — $64.35 with tax, quantity 1. Prints on the Findings &amp; Recommendations page only; not part of any month or total.</label></div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -377,9 +368,7 @@
       <div id="xrayFinalRow"></div>
       <div id="reExamRefBox"></div>
     </div>
-  </div>
 
-  <div>
     <div class="card">
       <h2>TX Phase (traction chair)</h2>
       <div class="hint">$75 each. Billed in whichever 4-week month you assign — not tied to individual visits — so you can spread the 4 phases out however works for the patient's wallet, regardless of how fast they actually work through them.</div>
@@ -390,15 +379,29 @@
         <tbody id="txPhaseRows"></tbody>
       </table>
     </div>
+  </div>
 
+  <div>
     <div class="card">
       <h2>Bolt-on services</h2>
       <div class="hint">For each service, set how many times a week it happens, which week it starts, and for how many weeks (leave blank to run through the end of the plan). Add a second frequency if the pace changes partway through. Occurrences land on the first N visits of each applicable week, from your care plan schedule.</div>
       <div id="boltOnRows"></div>
     </div>
 
+    <div class="card">
+      <h2>Actions</h2>
+      <div class="checkbox-row"><input type="checkbox" id="incFindings" checked><label for="incFindings">Include the Findings &amp; Recommendations page when printing (one-sided, nothing on the back)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="incSheet" checked><label for="incSheet">Include the spreadsheet-style financial breakdown page when printing (its own sheet, nothing on the back)</label></div>
+      <div class="btn-bar">
+        <button type="button" id="newPatientBtn" class="secondary">New patient (reset everything)</button>
+        <button type="button" id="copyBtn" class="secondary">Copy plan as text</button>
+        <button type="button" id="printBtn" class="secondary">Print</button>
+      </div>
+    </div>
   </div>
 </div>
+
+<hr class="full-divider no-print">
 
 <div id="output"></div>
 <div id="printView"></div>
