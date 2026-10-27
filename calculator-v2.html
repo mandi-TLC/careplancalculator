@@ -184,7 +184,7 @@
   .pv-sheet-table td.nw, .pv-sheet-table td.wrapok { white-space: normal; }
   .pv-sheet-table td.b { font-weight: 700; }
   .pv-sheet-nomo td.ctr, .pv-sheet-nomo th.ctr { display: none; }
-  .pv-fchange { font-weight: 700; font-size: 10px; margin-top: 2px; }
+  .pv-fchange { font-weight: 700; font-size: 10px; margin-bottom: 2px; }
   .pv-sheet-table td.num { white-space: nowrap; }
   .pv-sheet-table td, .pv-sheet-table th { overflow: hidden; }
   .pv-sheet-table td.nw { overflow: visible; }
@@ -636,14 +636,29 @@
   // happen, spaced that many visits apart, counted continuously (NOT reset at
   // month/row boundaries — so two exams can land in the same reporting month when
   // the numbers don't align to a 4-week block, and some months get none).
-  function computeExamInterval(totalVisits) {
-    if (totalVisits % 8 === 0) return 8;
-    if (totalVisits % 9 === 0) return 9;
-    if (totalVisits % 10 === 0) return 10;
-    return totalVisits || 1; // fallback: too short to divide cleanly — one exam at the end
+  // When the visits don't divide evenly by 8, 9 or 10, use the spacing (8-10) that comes
+  // out closest to even, and put the odd leftover visit(s) into the FINAL interval, so the
+  // last exam still lands on the stretch's last visit. Returns the spacing and how many
+  // exams the stretch has.
+  function examSpacing(totalVisits) {
+    var N = totalVisits || 0;
+    if (N <= 0) return { interval: 0, count: 0 };
+    if (N % 8 === 0) return { interval: 8, count: N / 8 };
+    if (N % 9 === 0) return { interval: 9, count: N / 9 };
+    if (N % 10 === 0) return { interval: 10, count: N / 10 };
+    var best = null;
+    for (var k = 1; k <= Math.floor(N / 8); k++) {
+      var base = Math.floor(N / k);
+      if (base < 8 || base > 10) continue;
+      var r = N - base * k;
+      if (!best || r < best.r || (r === best.r && k > best.k)) best = { k: k, base: base, r: r };
+    }
+    if (!best) return { interval: N, count: 1 }; // too short to space out — one exam at the end
+    return { interval: best.base, count: best.k };
   }
   function tier(freq, weeks) {
-    return { freq: freq, weeks: weeks, reExamInterval: computeExamInterval(freq * weeks) };
+    var s = examSpacing(freq * weeks);
+    return { freq: freq, weeks: weeks, reExamInterval: s.interval, examCount: s.count };
   }
 
   function preset(phases, triggers, atFinal, finalAreas) {
@@ -833,8 +848,8 @@
 
   var state = {
     phases: [
-      { freq: 3, weeks: 16, reExamInterval: 9 },
-      { freq: 2, weeks: 20, reExamInterval: 9 }
+      tier(3, 16),
+      tier(2, 20)
     ],
     xrayPlan: freshXrayPlan(),
     skipWeeks: [],
@@ -1091,7 +1106,18 @@
     container.querySelectorAll('input[type=number][data-field]').forEach(function(inp) {
       inp.addEventListener('input', function() {
         var idx = +inp.getAttribute('data-idx'), field = inp.getAttribute('data-field');
-        state.phases[idx][field] = +inp.value || 0;
+        var phObj = state.phases[idx];
+        phObj[field] = +inp.value || 0;
+        if (field === 'reExamInterval') {
+          // typed by hand: respect it exactly (no automatic spacing for this phase)
+          phObj.manualInterval = true; delete phObj.examCount;
+        } else if ((field === 'freq' || field === 'weeks') && !phObj.manualInterval && !phObj.role && !phObj.totalVisits && !phObj.eow) {
+          // keep the exam spacing automatic: recompute for the new visit count
+          var sp = examSpacing((phObj.freq || 0) * (phObj.weeks || 0));
+          phObj.reExamInterval = sp.interval; phObj.examCount = sp.count;
+          var iBox = container.querySelector('input[data-idx="' + idx + '"][data-field="reExamInterval"]');
+          if (iBox) iBox.value = sp.interval;
+        }
         // the closed-week / visit-count hints on pregnancy phases depend on weeks & frequency
         if (state.presetLength === PREGNANCY_KEY && (field === 'freq' || field === 'weeks')) { recalc(); return; }
         recalc();
@@ -1144,7 +1170,7 @@
     });
   }
   $('addPhaseBtn').addEventListener('click', function() {
-    state.phases.push({ freq: 1, weeks: 4, reExamInterval: 9 });
+    state.phases.push(tier(1, 4));
     renderPhases(); recalc();
   });
 
@@ -1564,7 +1590,12 @@
           for (var v = 1; v <= visitsThisWeek; v++) {
             visitNum++;
             phaseLocalVisit++;
-            var isReExamHere = (interval > 0 && (phaseLocalVisit % interval === 0)) ||
+            // Spaced exams: every `interval` visits up to the stretch's exam count, with the
+            // final exam always on the stretch's last visit (so leftover visits sit in the last gap).
+            var spacedHit = interval > 0 && (
+              (phaseLocalVisit % interval === 0 && (!phase.examCount || phaseLocalVisit <= (phase.examCount - 1) * interval)) ||
+              (phase.examCount && phaseLocalVisit === freq * weeks));
+            var isReExamHere = spacedHit ||
               (phase.examAt && phase.examAt.indexOf(phaseLocalVisit) >= 0) ||
               (phase.examVisitNums && phase.examVisitNums.indexOf(visitNum) >= 0);
             var visitObj = {
@@ -2710,7 +2741,7 @@
     rows.forEach(function(r) {
       var isPostBirth = !!(birthNote && plan.postBirthMonthIdx && r.monthIdx === plan.postBirthMonthIdx);
       var chg = (changeNotes[r.monthIdx] || []).map(function(t) { return '<div class="pv-fchange">' + escapeHtml(t) + '</div>'; }).join('');
-      html += '<tr' + (isPostBirth ? ' class="pv-birth-row"' : '') + '>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + chg + '</td>' +
+      html += '<tr' + (isPostBirth ? ' class="pv-birth-row"' : '') + '>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + chg + escapeHtml(r.services.join(', ')) + '</td>' +
         '<td class="num pv-money-col">' + money(r.fullCost) + '</td><td class="num pv-money-col">' + (r.insContribution > 0 ? '−' + money(r.insContribution) : money(0)) + '</td>' +
         '<td class="num pv-money-col">' + (r.savings > 0 ? '−' + money(r.savings) : money(0)) + '</td>' +
         '<td class="num pv-money-col">' + money(r.total) + '</td></tr>';
@@ -3157,7 +3188,7 @@
 
   $('newPatientBtn').addEventListener('click', function() {
     if (!window.confirm('Clear all patient info and start over?')) return;
-    state.phases = [{ freq: 3, weeks: 4, reExamInterval: 9 }];
+    state.phases = [tier(3, 4)];
     state.xrayPlan = freshXrayPlan();
     state.skipWeeks = [];
     state.savingsKey = 'none'; $('customResp').value = '';
