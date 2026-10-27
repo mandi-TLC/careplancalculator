@@ -177,7 +177,7 @@
   .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 1px 3px; }
   .pv-sheet-table td.ctr, .pv-sheet-table th.ctr { text-align: center; width: 3%; }
   .pv-sheet-table td { white-space: nowrap; }
-  .pv-sheet-table td.nw { white-space: normal; }
+  .pv-sheet-table td.nw, .pv-sheet-table td.wrapok { white-space: normal; }
   .pv-sheet-table td.b { font-weight: 700; }
   .pv-sheet-nomo td.ctr, .pv-sheet-nomo th.ctr { display: none; }
   .pv-fchange { font-weight: 700; font-size: 10px; margin-top: 2px; }
@@ -2482,7 +2482,7 @@
       }
       if (plan.combinedGrandTotal >= 0.005) html += '<div class="pv-pay-grid">' + payBlock() + payBlock() + '</div>';
 
-      html += '<div class="pv-signed-row" style="margin-top:35px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
+      html += '<div class="pv-signed-row" style="margin-top:75px;"><div class="pv-line">Signed</div><div class="pv-line">Date</div></div>';
 
       html += '</div>'; // .pv-page
 
@@ -2666,7 +2666,7 @@
           var cell = function(v, show) { return '<td class="num">' + (show ? zero(v) : '') + '</td>'; };
           sheetRows += '<tr class="' + (r === 0 ? 'mfirst ' : '') + (r === n - 1 ? 'mlast' : '') + '">' +
             (r === 0 ? '<td class="ctr" rowspan="' + n + '">' + mi + '</td><td class="dt" rowspan="' + n + '">' + calendarRangeForWeeks(wkS, wkE, startDateStr, skipList) + '</td>' : '') +
-            '<td>' + (lc ? escapeHtml(lc.label) : '') + '</td>' + cell(cf, lc) +
+            '<td' + (lc && /^Post-baby/.test(lc.label) ? ' class="wrapok"' : '') + '>' + (lc ? escapeHtml(lc.label) : '') + '</td>' + cell(cf, lc) +
             '<td>' + (lb ? escapeHtml(lb.label) : '') + '</td>' + cell(bfee, lb) +
             (r === 0 ? '<td class="num b" rowspan="' + n + '">' + money(aF + bF) + '</td>' : '') +
             cell((lc ? lc.sav : 0) + (lb ? lb.sav : 0), lc || lb) +
