@@ -241,10 +241,6 @@
         <div><label>Patient name</label><input type="text" id="patientName" placeholder="Jane Doe"></div>
         <div><label>Plan start date</label><input type="date" id="startDate"></div>
       </div>
-      <div id="skipWeekRows"></div>
-      <div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" id="addSkipWeekBtn">+ Add a skipped week (office closure)</button></div>
-      <div class="hint">Closures don't change the care plan itself (visit count, re-exams, x-rays, cost) — they only push the calendar dates out, since the office is closed then. Pick the real closure dates (e.g. the Mon–Thu you're closed for a holiday) and the tool figures out which plan week(s) that falls on and shifts everything after out automatically. Multiple closures stack correctly. A footnote naming the closed dates prints under the schedule table.</div>
-      <div id="weekCalendarBox"></div>
     </div>
 
     <div class="card">
@@ -253,6 +249,14 @@
       <div id="presetLengthRow" class="savings-grid" style="margin-bottom:10px;"></div>
       <div id="presetVariantRow" class="savings-grid"></div>
       <div id="presetDueDateRow"></div>
+    </div>
+
+    <div class="card">
+      <h2>Office closures (skipped weeks)</h2>
+      <div id="skipWeekRows"></div>
+      <div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" id="addSkipWeekBtn">+ Add a skipped week (office closure)</button></div>
+      <div class="hint">Closures don't change the care plan itself (visit count, re-exams, x-rays, cost) — they only push the calendar dates out, since the office is closed then. Pick the real closure dates (e.g. the Mon–Thu you're closed for a holiday) and the tool figures out which plan week(s) that falls on and shifts everything after out automatically. Multiple closures stack correctly. A footnote naming the closed dates prints under the schedule table.</div>
+      <div id="weekCalendarBox"></div>
     </div>
 
     <div class="card">
