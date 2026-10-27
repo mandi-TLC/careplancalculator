@@ -286,11 +286,16 @@
         <div><label>X-ray copay ($) — optional</label><input type="text" id="copayXray" placeholder="Same as above"></div>
       </div>
       <div class="row">
-        <div><label>X-ray coinsurance (%) — optional (for plans with a visit copay but coinsurance on x-rays)</label><input type="text" id="coinsXray" placeholder="Blank = x-rays follow the copay/coinsurance above"></div>
+        <div><label>X-ray coinsurance (%) — optional</label><input type="text" id="coinsXray" placeholder="Blank = follows copay/coinsurance"></div>
+        <div><label>Max insurance-covered visits (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
       </div>
       <div class="row">
-        <div><label>Max insurance-covered visits (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
         <div><label>Out-of-pocket max remaining ($) — optional</label><input type="text" id="oopRemaining" placeholder="Blank = not tracked"></div>
+        <div><label>Allowed: adjustment ($)</label><input type="number" id="feeAdjAllowed" value="0" min="0" step="0.01"></div>
+      </div>
+      <div class="row">
+        <div><label>Allowed: re-exam ($)</label><input type="number" id="feeReExamAllowed" value="0" min="0" step="0.01"></div>
+        <div><label>Allowed: x-ray per area ($)</label><input type="number" id="feeXrayAllowedPerArea" value="0" min="0" step="0.01"></div>
       </div>
       <div class="insurance-sub">
         <div class="row">
@@ -342,13 +347,13 @@
 
     <div class="card">
       <h2>Core fees</h2>
-      <div class="hint">Cash fees are fixed office rates and can't be edited here. Insurance allowed amounts vary by payer — enter those per plan.</div>
+      <div class="hint">Cash fees are fixed office rates and can't be edited here. Insurance allowed amounts vary by payer — they are entered in the Insurance section above.</div>
       <table>
-        <thead><tr><th>Visit type</th><th class="num">Cash fee</th><th class="num">Insurance allowed amt</th></tr></thead>
+        <thead><tr><th>Visit type</th><th class="num">Cash fee</th></tr></thead>
         <tbody>
-          <tr><td>Adjustment</td><td class="num fee-fixed"><b>$60.00</b></td><td class="num"><input type="number" id="feeAdjAllowed" value="0" min="0" step="0.01" style="margin-bottom:0;"></td></tr>
-          <tr><td>Re-exam (also anniversary exam)</td><td class="num fee-fixed"><b>$50.00</b></td><td class="num"><input type="number" id="feeReExamAllowed" value="0" min="0" step="0.01" style="margin-bottom:0;"></td></tr>
-          <tr><td>X-ray (per area)</td><td class="num fee-fixed"><b>$30.00</b></td><td class="num"><input type="number" id="feeXrayAllowedPerArea" value="0" min="0" step="0.01" style="margin-bottom:0;"></td></tr>
+          <tr><td>Adjustment</td><td class="num fee-fixed"><b>$60.00</b></td></tr>
+          <tr><td>Re-exam (also anniversary exam)</td><td class="num fee-fixed"><b>$50.00</b></td></tr>
+          <tr><td>X-ray (per area)</td><td class="num fee-fixed"><b>$30.00</b></td></tr>
         </tbody>
       </table>
     </div>
@@ -2278,34 +2283,41 @@
     var renewText = renewMo ? 'Policy renews ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][renewMo - 1] + ' ' + (parseInt($('renewDay').value, 10) || 1) +
       ($('renewReset').checked ? ' — insurance visits reset' : '') + ($('renewSame').checked ? '' : ' — new policy details apply') : '';
     // What changes in the new policy year (only the boxes that were filled in).
-    function renewChangeText(includeAllowed) {
-      if (!renewMo || $('renewSame').checked) return '';
-      var parts = [];
+    // Same order as the starting policy: carrier / visits allowed, deductible, copay and
+    // coinsurance, x-ray copay, x-ray coinsurance, out-of-pocket max (then allowed amounts).
+    function renewChangeLines(includeAllowed) {
+      if (!renewMo || $('renewSame').checked) return [];
+      var lines = [];
       function v(id) { return $(id).value.trim(); }
-      if (v('rnPlanName')) parts.push(escapeHtml(v('rnPlanName')));
-      if (v('rnVisitCap') !== '') parts.push((parseInt(v('rnVisitCap'), 10) || 0) + ' visits allowed');
-      if (v('rnDeductible') !== '') parts.push('Deductible: ' + money(parseFloat(v('rnDeductible')) || 0));
-      if (v('rnCopay') !== '') parts.push('Copay: ' + money(parseFloat(v('rnCopay')) || 0));
-      if (v('rnCoins') !== '') parts.push('Coinsurance: ' + (parseFloat(v('rnCoins')) || 0) + '%');
-      if (v('rnCopayXray') !== '') parts.push('X-ray copay: ' + money(parseFloat(v('rnCopayXray')) || 0));
-      if (v('rnCoinsXray') !== '') parts.push('X-ray coinsurance: ' + (parseFloat(v('rnCoinsXray')) || 0) + '%');
-      if (v('rnOop') !== '') parts.push('Out-of-pocket max: ' + money(parseFloat(v('rnOop')) || 0));
+      var head = (v('rnPlanName') ? escapeHtml(v('rnPlanName')) : '') + (v('rnVisitCap') !== '' ? (v('rnPlanName') ? ' — ' : '') + (parseInt(v('rnVisitCap'), 10) || 0) + ' visits allowed' : '');
+      if (head) lines.push(head);
+      if (v('rnDeductible') !== '') lines.push('Deductible remaining: ' + money(parseFloat(v('rnDeductible')) || 0));
+      var cc = [];
+      if (v('rnCopay') !== '') cc.push('Copay: ' + money(parseFloat(v('rnCopay')) || 0));
+      if (v('rnCoins') !== '') cc.push('Coinsurance: ' + (parseFloat(v('rnCoins')) || 0) + '%');
+      if (cc.length) lines.push(cc.join(' · '));
+      if (v('rnCopayXray') !== '') lines.push('X-ray copay: ' + money(parseFloat(v('rnCopayXray')) || 0));
+      if (v('rnCoinsXray') !== '') lines.push('X-ray coinsurance: ' + (parseFloat(v('rnCoinsXray')) || 0) + '%');
+      if (v('rnOop') !== '') lines.push('Out-of-pocket max remaining: ' + money(parseFloat(v('rnOop')) || 0));
       if (includeAllowed) {
-        if (v('rnFeeAdj') !== '') parts.push('Allowed adjustment: ' + money(parseFloat(v('rnFeeAdj')) || 0));
-        if (v('rnFeeReExam') !== '') parts.push('Allowed re-exam: ' + money(parseFloat(v('rnFeeReExam')) || 0));
-        if (v('rnFeeXray') !== '') parts.push('Allowed x-ray/area: ' + money(parseFloat(v('rnFeeXray')) || 0));
+        var al = [];
+        if (v('rnFeeAdj') !== '') al.push('Allowed adjustment: ' + money(parseFloat(v('rnFeeAdj')) || 0));
+        if (v('rnFeeReExam') !== '') al.push('Allowed re-exam: ' + money(parseFloat(v('rnFeeReExam')) || 0));
+        if (v('rnFeeXray') !== '') al.push('Allowed x-ray/area: ' + money(parseFloat(v('rnFeeXray')) || 0));
+        if (al.length) lines.push(al.join(' · '));
       }
-      return parts.length ? 'New policy year — ' + parts.join(' · ') : '';
+      return lines;
     }
     html += '<div class="col"><h4>Insurance</h4>' +
       (plan.hasInsurance
         ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') + '</div>' +
           '<div>Deductible remaining at start: ' + money(numVal('deductibleRemaining')) + '</div>' +
           '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>' +
+          ($('copayXray').value.trim() !== '' ? '<div>X-ray copay: ' + money(parseFloat($('copayXray').value) || 0) + '</div>' : '') +
           ($('coinsXray').value.trim() !== '' ? '<div>X-ray coinsurance: ' + (parseFloat($('coinsXray').value) || 0) + '%</div>' : '') +
           (plan.oopTracked ? '<div>Out-of-pocket max remaining: ' + money(numVal('oopRemaining')) + '</div>' : '') +
           (renewText ? '<div>' + renewText + '</div>' : '') +
-          (renewChangeText(false) ? '<div><b>' + renewChangeText(false).replace(' — ', ':</b> ') + '</div>' : '')
+          (renewChangeLines(false).length ? '<div style="margin-top:4px;"><b>New policy year:</b></div>' + renewChangeLines(false).map(function(t) { return '<div>' + t + '</div>'; }).join('') : '')
         : '<div>Self-pay — no insurance billed on this plan</div>') +
       '</div>';
     html += '<div class="col"><h4>Savings Program</h4><div>' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '</div>' +
@@ -2703,10 +2715,12 @@
       if (plan.hasInsurance) {
         sheetNotes.push('Insurance' + (insurancePlanName ? ': ' + insurancePlanName : '') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') +
           ' · Deductible remaining at start ' + money(numVal('deductibleRemaining')) + ' · Copay ' + money(numVal('copayGeneral')) + ' · Coinsurance ' + ($('coinsurancePct').value || 0) + '%' +
+          ($('copayXray').value.trim() !== '' ? ' · X-ray copay ' + money(parseFloat($('copayXray').value) || 0) : '') +
           ($('coinsXray').value.trim() !== '' ? ' · X-ray coinsurance ' + (parseFloat($('coinsXray').value) || 0) + '%' : '') +
           (plan.oopTracked ? ' · Out-of-pocket max remaining ' + money(numVal('oopRemaining')) : '') +
+          ' · Allowed: adjustment ' + money(numVal('feeAdjAllowed')) + ', re-exam ' + money(numVal('feeReExamAllowed')) + ', x-ray/area ' + money(numVal('feeXrayAllowedPerArea')) +
           (renewText ? ' · ' + renewText : '') +
-          (renewChangeText(true) ? ' · ' + renewChangeText(true).replace(/&amp;/g, '&') : ''));
+          (renewChangeLines(true).length ? ' · New policy year — ' + renewChangeLines(true).join(' · ').replace(/&amp;/g, '&') : ''));
         sheetNotes.push('Ins Contrib = fees insurance picks up. Co-pay columns = what the patient still owes on insurance-billed visits (deductible, copay, coinsurance).');
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
