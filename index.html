@@ -310,6 +310,9 @@
           <div id="renewFields" style="display:none;">
             <div class="hint" style="margin-top:0;">New policy year — leave any box blank to keep the amount entered above.</div>
             <div class="row">
+              <div><label>Insurance plan / carrier — if it changes (prints on the plan)</label><input type="text" id="rnPlanName" placeholder="Blank = same carrier"></div>
+            </div>
+            <div class="row">
               <div><label>Deductible ($)</label><input type="text" id="rnDeductible"></div>
               <div><label>Coinsurance (%)</label><input type="text" id="rnCoins"></div>
             </div>
@@ -2274,6 +2277,26 @@
     var renewMo = parseInt($('renewMonth').value, 10) || 0;
     var renewText = renewMo ? 'Policy renews ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][renewMo - 1] + ' ' + (parseInt($('renewDay').value, 10) || 1) +
       ($('renewReset').checked ? ' — insurance visits reset' : '') + ($('renewSame').checked ? '' : ' — new policy details apply') : '';
+    // What changes in the new policy year (only the boxes that were filled in).
+    function renewChangeText(includeAllowed) {
+      if (!renewMo || $('renewSame').checked) return '';
+      var parts = [];
+      function v(id) { return $(id).value.trim(); }
+      if (v('rnPlanName')) parts.push(escapeHtml(v('rnPlanName')));
+      if (v('rnVisitCap') !== '') parts.push((parseInt(v('rnVisitCap'), 10) || 0) + ' visits allowed');
+      if (v('rnDeductible') !== '') parts.push('Deductible: ' + money(parseFloat(v('rnDeductible')) || 0));
+      if (v('rnCopay') !== '') parts.push('Copay: ' + money(parseFloat(v('rnCopay')) || 0));
+      if (v('rnCoins') !== '') parts.push('Coinsurance: ' + (parseFloat(v('rnCoins')) || 0) + '%');
+      if (v('rnCopayXray') !== '') parts.push('X-ray copay: ' + money(parseFloat(v('rnCopayXray')) || 0));
+      if (v('rnCoinsXray') !== '') parts.push('X-ray coinsurance: ' + (parseFloat(v('rnCoinsXray')) || 0) + '%');
+      if (v('rnOop') !== '') parts.push('Out-of-pocket max: ' + money(parseFloat(v('rnOop')) || 0));
+      if (includeAllowed) {
+        if (v('rnFeeAdj') !== '') parts.push('Allowed adjustment: ' + money(parseFloat(v('rnFeeAdj')) || 0));
+        if (v('rnFeeReExam') !== '') parts.push('Allowed re-exam: ' + money(parseFloat(v('rnFeeReExam')) || 0));
+        if (v('rnFeeXray') !== '') parts.push('Allowed x-ray/area: ' + money(parseFloat(v('rnFeeXray')) || 0));
+      }
+      return parts.length ? 'New policy year — ' + parts.join(' · ') : '';
+    }
     html += '<div class="col"><h4>Insurance</h4>' +
       (plan.hasInsurance
         ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') + '</div>' +
@@ -2281,7 +2304,8 @@
           '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>' +
           ($('coinsXray').value.trim() !== '' ? '<div>X-ray coinsurance: ' + (parseFloat($('coinsXray').value) || 0) + '%</div>' : '') +
           (plan.oopTracked ? '<div>Out-of-pocket max remaining: ' + money(numVal('oopRemaining')) + '</div>' : '') +
-          (renewText ? '<div>' + renewText + '</div>' : '')
+          (renewText ? '<div>' + renewText + '</div>' : '') +
+          (renewChangeText(false) ? '<div><b>' + renewChangeText(false).replace(' — ', ':</b> ') + '</div>' : '')
         : '<div>Self-pay — no insurance billed on this plan</div>') +
       '</div>';
     html += '<div class="col"><h4>Savings Program</h4><div>' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '</div>' +
@@ -2681,7 +2705,8 @@
           ' · Deductible remaining at start ' + money(numVal('deductibleRemaining')) + ' · Copay ' + money(numVal('copayGeneral')) + ' · Coinsurance ' + ($('coinsurancePct').value || 0) + '%' +
           ($('coinsXray').value.trim() !== '' ? ' · X-ray coinsurance ' + (parseFloat($('coinsXray').value) || 0) + '%' : '') +
           (plan.oopTracked ? ' · Out-of-pocket max remaining ' + money(numVal('oopRemaining')) : '') +
-          (renewText ? ' · ' + renewText : ''));
+          (renewText ? ' · ' + renewText : '') +
+          (renewChangeText(true) ? ' · ' + renewChangeText(true).replace(/&amp;/g, '&') : ''));
         sheetNotes.push('Ins Contrib = fees insurance picks up. Co-pay columns = what the patient still owes on insurance-billed visits (deductible, copay, coinsurance).');
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
@@ -2708,7 +2733,7 @@
   ['patientName', 'startDate', 'practiceName', 'practicePhone', 'insurancePlanName',
    'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
    'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'coinsXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining', 'incFindings', 'incSheet',
-   'renewMonth', 'renewDay', 'renewReset', 'renewSame', 'rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray', 'incDenneroll']
+   'renewMonth', 'renewDay', 'renewReset', 'renewSame', 'rnPlanName', 'rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray', 'incDenneroll']
     .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
   function syncRenewUI() {
     $('renewDetails').style.display = $('renewMonth').value ? '' : 'none';
@@ -2749,7 +2774,7 @@
     $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = '';
     $('billFullIfZeroCore').checked = false; $('oopRemaining').value = '';
     $('renewMonth').value = ''; $('renewDay').value = 1; $('renewReset').checked = true; $('renewSame').checked = true;
-    ['rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray'].forEach(function(id) { $(id).value = ''; });
+    ['rnPlanName', 'rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray'].forEach(function(id) { $(id).value = ''; });
     $('incDenneroll').checked = false; syncRenewUI();
     $('feeAdjAllowed').value = 0; $('feeReExamAllowed').value = 0; $('feeXrayAllowedPerArea').value = 0;
     renderPresetTree(); renderPhases(); renderXrayPlan(); renderSkipWeeks(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
