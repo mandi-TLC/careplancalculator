@@ -21,7 +21,11 @@
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 18px; }
-  .page-head-doc { display: flex; gap: 10px; min-width: 380px; }
+  .page-head-doc { display: flex; gap: 10px; min-width: 420px; margin-right: 40px; }
+  #stickyBar .sb-opts { display: flex; align-items: center; gap: 14px; font-size: 12.5px; }
+  #stickyBar .sb-opts label { display: flex; align-items: center; gap: 5px; margin: 0; font-weight: 400; color: #fff; cursor: pointer; }
+  #stickyBar .sb-opts input { width: auto; margin: 0; }
+  #stickyBar button.sb-secondary { background: transparent; color: #fff; border: 1px solid #fff; }
   .page-head-doc > div { flex: 1; }
   .page-head-doc input { margin-bottom: 0; }
   hr.full-divider { border: none; border-top: 2px solid #bdbab0; margin: 8px 0 20px; }
@@ -243,7 +247,12 @@
 <div id="stickyBar" class="no-print">
   <div class="sb-name" id="sbName">New plan</div>
   <div class="sb-total">Plan total: <b id="sbTotal">$0.00</b></div>
-  <button type="button" id="sbPrint">Print</button>
+  <div class="sb-opts">
+    <label title="Include the Findings &amp; Recommendations page when printing (one-sided)"><input type="checkbox" id="incFindings" checked>Findings page</label>
+    <label title="Include the spreadsheet-style financial breakdown page when printing (its own sheet)"><input type="checkbox" id="incSheet" checked>Spreadsheet page</label>
+  </div>
+  <button type="button" id="newPatientBtn" class="sb-secondary">New patient</button>
+  <button type="button" id="printBtn">Print</button>
 </div>
 
 <div class="page-head no-print">
@@ -252,7 +261,7 @@
     <p class="sub" style="margin:0;">Plug in the recommended care plan, insurance details, additional services, and savings — get a 4-week-block financial plan ready to transcribe onto patient paperwork.</p>
   </div>
   <div class="page-head-doc">
-    <div><label>Doctor's name (prints on the plan)</label><input type="text" id="practiceName" value="Burke Larsen, DC"></div>
+    <div><label>Doctor's name (prints on plan)</label><input type="text" id="practiceName" value="Burke Larsen, DC"></div>
     <div><label>Phone</label><input type="text" id="practicePhone" value="(801) 479-3200"></div>
   </div>
 </div>
@@ -283,18 +292,19 @@
       <div id="weekCalendarBox"></div>
     </div>
 
+  </div>
+
+  <div>
     <div class="card">
       <h2>SAVINGS</h2>
       <div class="hint">Click the plan that applies. Percentages are what the patient is responsible for (not the discount). Savings only apply to self-pay charges — never to anything insurance is covering.</div>
       <div class="savings-grid" id="savingsGrid"></div>
-      <div class="insurance-sub">
-        <div class="checkbox-row"><input type="checkbox" id="incDenneroll"><label for="incDenneroll">Recommend a Denneroll (spinal orthotic pillow) — $64.35 with tax, quantity 1. Prints on the Findings &amp; Recommendations page only; not part of any month or total.</label></div>
+      <div id="customSavingsRow" style="display:none;margin-top:10px;">
+        <label for="customResp">Custom: percent the patient pays (%)</label>
+        <input type="number" id="customResp" min="0" max="100" step="0.1" placeholder="e.g. 40 = patient pays 40%, 60% off">
       </div>
     </div>
 
-  </div>
-
-  <div>
     <div class="card" id="cardInsurance">
       <h2>Insurance</h2>
       <div class="checkbox-row"><input type="checkbox" id="hasInsurance"><label for="hasInsurance">Patient has insurance to bill (unchecked = straight cash fees throughout)</label></div>
@@ -523,37 +533,28 @@
 
   <div>
     <div class="card" id="cardAddl">
-      <h2 id="addlHead" style="cursor:pointer;">Additional services <span id="addlToggle" style="font-size:12px;font-weight:normal;color:#2a6;">(show)</span></h2>
-      <div id="addlSummary" class="hint" style="margin-top:0;">None added.</div>
-      <div id="addlBody" style="display:none;">
+      <h2>Additional services</h2>
+      <div id="dennWrap" class="checkbox-row"><input type="checkbox" id="incDenneroll"><label for="incDenneroll">Recommend a Denneroll (spinal orthotic pillow) — $64.35 with tax, quantity 1. Prints on the Findings &amp; Recommendations page only; not part of any month or total.</label></div>
+      <div id="addlBody">
         <div class="tabs" id="addlTabs">
-          <button type="button" class="tab active" data-tab="tabBolt">Bolt-on services</button>
-          <button type="button" class="tab" data-tab="tabTx">TX chair</button>
+          <button type="button" class="tab active" data-tab="tabTx">TX chair <span class="dot" id="dotTx"></span></button>
+          <button type="button" class="tab" data-tab="tabBolt">Bolt-on services <span class="dot" id="dotBolt"></span></button>
         </div>
-        <div class="tabpanel" id="tabBolt">
-          <div class="hint">For each service, set how many times a week it happens, which week it starts, and for how many weeks (blank = through the end of the plan).</div>
+        <div class="tabpanel" id="tabTx">
+          <div class="checkbox-row"><input type="checkbox" id="txUsed"><label for="txUsed">Used in this plan ($75 each, billed in whichever 4-week month you assign)</label></div>
+          <div id="txBody" style="display:none;">
+            <div class="radio-row" id="txPhaseModeRow"></div>
+            <div id="txPhaseInsuranceSub"></div>
+            <table style="margin-top:8px;">
+              <thead><tr><th>Phase</th><th>Used?</th><th>Bill in month #</th></tr></thead>
+              <tbody id="txPhaseRows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tabpanel" id="tabBolt" style="display:none;">
+          <div class="hint">Check a service to set how many times a week it happens, which week it starts, and for how many weeks (blank = through the end of the plan).</div>
           <div id="boltOnRows"></div>
         </div>
-        <div class="tabpanel" id="tabTx" style="display:none;">
-          <div class="hint">$75 each. Billed in whichever 4-week month you assign, not tied to individual visits.</div>
-          <div class="radio-row" id="txPhaseModeRow"></div>
-          <div id="txPhaseInsuranceSub"></div>
-          <table style="margin-top:8px;">
-            <thead><tr><th>Phase</th><th>Used?</th><th>Bill in month #</th></tr></thead>
-            <tbody id="txPhaseRows"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Actions</h2>
-      <div class="checkbox-row"><input type="checkbox" id="incFindings" checked><label for="incFindings">Include the Findings &amp; Recommendations page when printing (one-sided, nothing on the back)</label></div>
-      <div class="checkbox-row"><input type="checkbox" id="incSheet" checked><label for="incSheet">Include the spreadsheet-style financial breakdown page when printing (its own sheet, nothing on the back)</label></div>
-      <div class="btn-bar">
-        <button type="button" id="newPatientBtn" class="secondary">New patient (reset everything)</button>
-        <button type="button" id="copyBtn" class="secondary">Copy plan as text</button>
-        <button type="button" id="printBtn" class="secondary">Print</button>
       </div>
     </div>
   </div>
@@ -584,8 +585,18 @@
     { key: 'carecredit', label: 'Care Credit', responsibility: 95 },
     { key: '2nd', label: '2nd Person', responsibility: 72 },
     { key: '3rd', label: '3rd Person', responsibility: 65 },
-    { key: '4th', label: '4th Person', responsibility: 58 }
+    { key: '4th', label: '4th Person', responsibility: 58 },
+    { key: 'custom', label: 'Custom', responsibility: null }
   ];
+  // The custom option's percent comes from the box (percent the patient pays), clamped to 0-100.
+  function currentSavingsOpt() {
+    var opt = SAVINGS_OPTIONS.filter(function(o) { return o.key === state.savingsKey; })[0] || SAVINGS_OPTIONS[0];
+    if (opt.key !== 'custom') return opt;
+    var v = parseFloat($('customResp').value);
+    if (isNaN(v)) v = 100;
+    v = Math.max(0, Math.min(100, v));
+    return { key: 'custom', label: 'Custom', responsibility: v };
+  }
 
   function freshSegment() { return { timesPerWeek: 1, startWeek: 1, durationWeeks: null }; }
 
@@ -602,6 +613,7 @@
 
   function freshTxPhase() {
     return {
+      used: false,
       billingMode: 'selfpay',
       allowedAmount: 0, copay: 0, coinsurancePct: 0, maxCoveredVisits: null, billFullIfZero: false, noExtraCharge: false,
       phases: [
@@ -988,18 +1000,21 @@
     var grid = $('savingsGrid');
     grid.innerHTML = '';
     SAVINGS_OPTIONS.forEach(function(opt) {
-      var discount = 100 - opt.responsibility;
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'savings-btn' + (state.savingsKey === opt.key ? ' active' : '');
-      btn.innerHTML = opt.label + '<span class="pct">' + opt.responsibility + '% responsibility (' + discount + '% off)</span>';
+      if (opt.key === 'custom') {
+        btn.innerHTML = opt.label + '<span class="pct">you enter the % the patient pays</span>';
+      } else {
+        btn.innerHTML = opt.label + '<span class="pct">' + opt.responsibility + '% responsibility (' + (100 - opt.responsibility) + '% off)</span>';
+      }
       btn.addEventListener('click', function() { state.savingsKey = opt.key; renderSavings(); recalc(); });
       grid.appendChild(btn);
     });
+    $('customSavingsRow').style.display = state.savingsKey === 'custom' ? '' : 'none';
   }
   function currentDiscountPct() {
-    var opt = SAVINGS_OPTIONS.filter(function(o) { return o.key === state.savingsKey; })[0] || SAVINGS_OPTIONS[0];
-    return 100 - opt.responsibility;
+    return 100 - currentSavingsOpt().responsibility;
   }
 
   // ---- phase rows ----
@@ -1268,6 +1283,9 @@
   // ---- TX Phase rendering ----
   function renderTxPhase() {
     var tx = state.txPhase;
+    $('txUsed').checked = !!tx.used;
+    $('txBody').style.display = tx.used ? '' : 'none';
+    $('txUsed').onchange = function() { tx.used = this.checked; $('txBody').style.display = tx.used ? '' : 'none'; recalc(); };
     var modeRow = $('txPhaseModeRow');
     modeRow.innerHTML =
       '<label><input type="radio" name="txMode" value="insurance" ' + (tx.billingMode === 'insurance' ? 'checked' : '') + '>Billed to insurance</label>' +
@@ -1359,13 +1377,13 @@
         '<div class="block-title"><strong>' + b.label + ' ($' + b.cash.toFixed(2) + ' cash ea)</strong>' +
           '<label style="margin:0;font-weight:500;"><input type="checkbox" style="width:auto;margin-right:5px;" ' + (b.active ? 'checked' : '') + ' data-idx="' + bidx + '" data-field="active">Used in this plan</label>' +
         '</div>' +
-        segmentsHtml +
+        (b.active ? (segmentsHtml +
         '<div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" data-add-seg="' + bidx + '">+ Add another frequency</button></div>' +
         '<div class="radio-row">' +
           radioBtn(bidx, 'insurance', b.billingMode, 'Billed to insurance') +
           radioBtn(bidx, 'selfpay', b.billingMode, 'Self-pay') +
         '</div>' +
-        insHtml;
+        insHtml) : '');
       container.appendChild(block);
     });
 
@@ -1413,7 +1431,7 @@
     container.querySelectorAll('input[type=checkbox][data-field=active]').forEach(function(inp) {
       inp.addEventListener('change', function() {
         state.boltOns[+inp.getAttribute('data-idx')].active = inp.checked;
-        recalc();
+        renderBoltOns(); recalc();
       });
     });
     container.querySelectorAll('input[type=checkbox][data-field=billFullIfZero]').forEach(function(inp) {
@@ -1967,7 +1985,7 @@
 
     var monthSet = {};
     Object.keys(visitsByMonth).forEach(function(k) { monthSet[k] = true; });
-    state.txPhase.phases.forEach(function(p) { if (p.active) monthSet[p.billMonth] = true; });
+    state.txPhase.phases.forEach(function(p) { if (p.active && state.txPhase.used) monthSet[p.billMonth] = true; });
     var sortedMonths = Object.keys(monthSet).map(Number).sort(function(a, b) { return a - b; });
 
     var coreMonths = {}, boltMonths = {};
@@ -2090,7 +2108,7 @@
       });
 
       state.txPhase.phases.forEach(function(p) {
-        if (!p.active || p.billMonth !== monthIdx) return;
+        if (!state.txPhase.used || !p.active || p.billMonth !== monthIdx) return;
         enterYears(weekStartDate(wr.weekStart));
         var cashFull = CASH.txPhase, owed, bucket;
         var txNotCovered = state.txPhase.billFullIfZero && state.txPhase.allowedAmount <= 0 && !state.txPhase.noExtraCharge;
@@ -2470,11 +2488,11 @@
     }, { fullCost: 0, insContribution: 0, savings: 0, total: 0 });
 
     var totalInsuranceSavings = plan.coreGrand.insuranceSavings;
-    var savingsOpt = SAVINGS_OPTIONS.filter(function(o) { return o.key === state.savingsKey; })[0] || SAVINGS_OPTIONS[0];
+    var savingsOpt = currentSavingsOpt();
     var box = function(checked) { return checked ? '☑' : '☐'; };
 
     var anyXray = plan.xrayVisitNums.length > 0;
-    var txActive = state.txPhase.phases.some(function(p) { return p.active; });
+    var txActive = state.txPhase.used && state.txPhase.phases.some(function(p) { return p.active; });
     var boltActive = state.boltOns.some(function(b) { return b.active; });
 
     function phaseVisitCount(p) {
@@ -3086,14 +3104,14 @@
 
   var lastPlan = null;
   function recalc() {
-    $('incDenneroll').closest('.insurance-sub').style.display = state.presetLength === PREGNANCY_KEY ? 'none' : '';
+    $('dennWrap').style.display = state.presetLength === PREGNANCY_KEY ? 'none' : '';
     lastPlan = computePlan(); render(lastPlan); renderPrintView(lastPlan); renderWeekCalendar(lastPlan); renderReExamReference();
     if (typeof uiRefresh === 'function') uiRefresh(); }
 
   ['patientName', 'startDate', 'practiceName', 'practicePhone', 'insurancePlanName',
    'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
    'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'coinsXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining', 'incFindings', 'incSheet',
-   'renewMonth', 'renewDay', 'renewReset', 'renewSame', 'rnPlanName', 'rnBillFull', 'rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray', 'incDenneroll']
+   'customResp', 'renewMonth', 'renewDay', 'renewReset', 'renewSame', 'rnPlanName', 'rnBillFull', 'rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray', 'incDenneroll']
     .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
   var SEC_IDS = ['secType', 'secName', 'secMode', 'secPct', 'secDed', 'secCap', 'secCoins', 'secCopay', 'secFeeAdj', 'secFeeReExam', 'secFeeXray', 'secCoversDed', 'secBillsUncovered', 'secBillsAfterCap',
     'secRenewMonth', 'secRenewDay', 'secRenewReset', 'secRenewSame', 'snName', 'snMode', 'snPct', 'snDed', 'snCap', 'snCoins', 'snCopay', 'snFeeAdj', 'snFeeReExam', 'snFeeXray', 'snCoversDed'];
@@ -3138,10 +3156,11 @@
   });
 
   $('newPatientBtn').addEventListener('click', function() {
+    if (!window.confirm('Clear all patient info and start over?')) return;
     state.phases = [{ freq: 3, weeks: 4, reExamInterval: 9 }];
     state.xrayPlan = freshXrayPlan();
     state.skipWeeks = [];
-    state.savingsKey = 'none';
+    state.savingsKey = 'none'; $('customResp').value = '';
     state.boltOns = freshBoltOns();
     state.txPhase = freshTxPhase();
     state.presetLength = null; state.presetVariant = null; state.dueDate = null; state.pregExams = {};
@@ -3181,43 +3200,6 @@
     window.print();
   }
   $('printBtn').addEventListener('click', doPrint);
-  $('sbPrint').addEventListener('click', doPrint);
-
-  $('copyBtn').addEventListener('click', function() {
-    if (!lastPlan || !lastPlan.totalVisits) return;
-    var name = $('patientName').value.trim() || 'Patient';
-    var lines = [];
-    lines.push(name + ' — Care Plan Financial Plan');
-    if ($('startDate').value) lines.push('Start: ' + $('startDate').value);
-    lines.push('Total visits: ' + lastPlan.totalVisits + ' over ' + lastPlan.totalWeeks + ' weeks');
-    lines.push('Re-exams (incl. anniversary) at visit #: ' + lastPlan.reExamVisitNums.join(', '));
-    if (lastPlan.xrayVisitNums.length) lines.push('X-rays at visit #: ' + lastPlan.xrayVisitNums.join(', '));
-    lines.push('Savings applied: ' + lastPlan.discountPct + '% off self-pay charges only');
-    lines.push('');
-    lines.push('CORE PLAN');
-    lines.push(['Month', 'Weeks', 'Adj', 'Re-Exams', 'X-Rays', 'TX Phase', 'Ins. Visits', 'Self-Pay Visits', 'Subtotal', 'Insurance Savings', 'Self-Pay Savings', 'Total Due'].join('\t'));
-    lastPlan.coreMonths.forEach(function(m) {
-      lines.push(['Month ' + m.monthIdx, 'Weeks ' + m.weekStart + '-' + m.weekEnd, m.adjCount, m.reExamCount, m.xrayCount, m.txPhaseCount, m.insuranceVisits, m.selfPayVisits, money(m.subtotal), money(m.insuranceSavings), money(m.selfPaySavings), money(m.total)].join('\t'));
-    });
-    lines.push(['Core Plan Total', '', '', '', '', '', lastPlan.coreGrand.insuranceVisits, lastPlan.coreGrand.selfPayVisits, money(lastPlan.coreGrand.subtotal), money(lastPlan.coreGrand.insuranceSavings), money(lastPlan.coreGrand.selfPaySavings), money(lastPlan.coreGrand.total)].join('\t'));
-    if (lastPlan.boltMonths.length) {
-      lines.push('');
-      lines.push('BOLT-ON SERVICES');
-      lines.push(['Month', 'Weeks', 'Decomp', 'Laser', 'Acupuncture', 'Add-On', 'Ins. Visits', 'Self-Pay Visits', 'Subtotal', 'Insurance Savings', 'Self-Pay Savings', 'Total Due', 'Total Incl. Core'].join('\t'));
-      lastPlan.boltMonths.forEach(function(m) {
-        lines.push(['Month ' + m.monthIdx, 'Weeks ' + m.weekStart + '-' + m.weekEnd, m.counts.decomp, m.counts.laser, m.counts.acupuncture, m.counts.addon, m.insuranceVisits, m.selfPayVisits, money(m.subtotal), money(m.insuranceSavings), money(m.selfPaySavings), money(m.total), money(m.combinedTotal)].join('\t'));
-      });
-      lines.push(['Additional Services Total', '', '', '', '', '', lastPlan.boltGrand.insuranceVisits, lastPlan.boltGrand.selfPayVisits, money(lastPlan.boltGrand.subtotal), money(lastPlan.boltGrand.insuranceSavings), money(lastPlan.boltGrand.selfPaySavings), money(lastPlan.boltGrand.total), money(lastPlan.combinedGrandTotal)].join('\t'));
-    }
-    var text = lines.join('\n');
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function() { fallbackCopy(text); });
-    else fallbackCopy(text);
-  });
-  function fallbackCopy(text) {
-    var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch (e) {}
-    document.body.removeChild(ta);
-  }
 
   // ---- UI simplification: tabs, collapsibles, info toggles, sticky bar (no data is stored in the browser) ----
   document.querySelectorAll('.tabs').forEach(function(bar) {
@@ -3230,7 +3212,7 @@
     });
   });
   document.querySelectorAll('.grid.no-print .hint').forEach(function(h) {
-    if (h.textContent.length < 120 || h.id === 'addlSummary') return;
+    if (h.textContent.length < 120) return;
     var btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'info-btn'; btn.textContent = '? Info';
     h.style.display = 'none';
@@ -3254,13 +3236,6 @@
   }
   var colPhases = makeCollapsible('Care plan phases'), colXray = makeCollapsible('X-rays');
   var lastPresetSig = null;
-  function setAddl(open) {
-    $('addlBody').style.display = open ? '' : 'none';
-    $('addlSummary').style.display = open ? 'none' : '';
-    $('addlToggle').textContent = open ? '(hide)' : '(show)';
-  }
-  var addlOpen = false;
-  $('addlHead').addEventListener('click', function() { addlOpen = !addlOpen; setAddl(addlOpen); });
   function uiRefresh() {
     var p = lastPlan; if (!p) return;
     var name = $('patientName').value.trim();
@@ -3279,13 +3254,9 @@
     lastPresetSig = sig;
     if (colPhases) colPhases.sum.textContent = 'Filled in by the selected preset (' + (state.phases ? state.phases.length : 0) + ' phase' + ((state.phases && state.phases.length === 1) ? '' : 's') + '). Click the title to edit.';
     if (colXray) colXray.sum.textContent = (p.xrayVisitNums && p.xrayVisitNums.length ? p.xrayVisitNums.length + ' x-ray visit(s) planned' : 'No x-rays planned') + '. Click the title to edit.';
-    var parts = [];
-    if (p.boltMonths && p.boltMonths.length) parts.push('additional services in ' + p.boltMonths.length + ' month(s)');
-    var tx = 0; (p.coreMonths || []).forEach(function(m) { tx += m.txPhaseCount || 0; });
-    if (tx) parts.push(tx + ' TX chair phase(s)');
-    $('addlSummary').textContent = parts.length ? 'Added: ' + parts.join('; ') + '.' : 'None added.';
+    $('dotTx').className = 'dot' + ((state.txPhase.used && state.txPhase.phases.some(function(x) { return x.active; })) ? ' on' : '');
+    $('dotBolt').className = 'dot' + (state.boltOns.some(function(b) { return b.active; }) ? ' on' : '');
   }
-  setAddl(false);
   if (colPhases) colPhases.set(true);
   if (colXray) colXray.set(true);
 
