@@ -20,6 +20,12 @@
   .sub { color: #666; margin: 0 0 20px; font-size: 13px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 18px; }
+  .page-head-doc { display: flex; gap: 10px; min-width: 380px; }
+  .page-head-doc > div { flex: 1; }
+  .page-head-doc input { margin-bottom: 0; }
+  hr.full-divider { border: none; border-top: 2px solid #bdbab0; margin: 8px 0 20px; }
+  @media (max-width: 900px) { .page-head { flex-direction: column; align-items: stretch; } .page-head-doc { min-width: 0; } }
   .card { background: #fff; border: 1px solid #e0ded8; border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
   label { display: block; font-size: 12.5px; font-weight: 600; color: #444; margin-bottom: 3px; }
   input[type=text], input[type=number], input[type=date] {
@@ -216,11 +222,31 @@
 </head>
 <body>
 
-<h1 class="no-print">Care Plan Financial Calculator</h1>
-<p class="sub no-print">Plug in the recommended care plan, insurance details, TX Phase, bolt-on services, and savings — get a 4-week-block financial plan ready to transcribe onto patient paperwork.</p>
+<div class="page-head no-print">
+  <div>
+    <h1>Care Plan Financial Calculator</h1>
+    <p class="sub" style="margin:0;">Plug in the recommended care plan, insurance details, TX Phase, bolt-on services, and savings — get a 4-week-block financial plan ready to transcribe onto patient paperwork.</p>
+  </div>
+  <div class="page-head-doc">
+    <div><label>Doctor's name (prints on the plan)</label><input type="text" id="practiceName" value="Burke Larsen, DC"></div>
+    <div><label>Phone</label><input type="text" id="practicePhone" value="(801) 479-3200"></div>
+  </div>
+</div>
 
 <div class="grid no-print">
   <div>
+    <div class="card">
+      <h2>Patient</h2>
+      <div class="row">
+        <div><label>Patient name</label><input type="text" id="patientName" placeholder="Jane Doe"></div>
+        <div><label>Plan start date</label><input type="date" id="startDate"></div>
+      </div>
+      <div id="skipWeekRows"></div>
+      <div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" id="addSkipWeekBtn">+ Add a skipped week (office closure)</button></div>
+      <div class="hint">Closures don't change the care plan itself (visit count, re-exams, x-rays, cost) — they only push the calendar dates out, since the office is closed then. Pick the real closure dates (e.g. the Mon–Thu you're closed for a holiday) and the tool figures out which plan week(s) that falls on and shifts everything after out automatically. Multiple closures stack correctly. A footnote naming the closed dates prints under the schedule table.</div>
+      <div id="weekCalendarBox"></div>
+    </div>
+
     <div class="card">
       <h2>Care plan preset</h2>
       <div class="hint">Pick the doctor's recommended plan to pre-fill the phases and x-ray timing below. Insurance, bolt-ons, and SAVINGS are still entered manually for every plan. Switching presets overwrites the phases/x-ray sections — any manual edits made below will be replaced.</div>
@@ -230,41 +256,18 @@
     </div>
 
     <div class="card">
-      <h2>Patient</h2>
-      <div class="row">
-        <div><label>Patient name</label><input type="text" id="patientName" placeholder="Jane Doe"></div>
-        <div><label>Plan start date</label><input type="date" id="startDate"></div>
-      </div>
-      <div class="hint">Skipped weeks don't change the care plan itself (visit count, re-exams, x-rays, cost) — they only push the calendar dates out, since the office is closed then. Pick the real closure dates (e.g. the Mon–Thu you're closed for a holiday) and the tool figures out which plan week(s) that falls on and shifts everything after out automatically — no need to count weeks by hand. Multiple closures stack correctly. A footnote naming the closed dates prints under the schedule table.</div>
-      <div id="skipWeekRows"></div>
-      <div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" id="addSkipWeekBtn">+ Add a skipped week</button></div>
-      <div id="weekCalendarBox"></div>
-    </div>
-
-    <div class="card">
-      <h2>Doctor header (for the printed plan)</h2>
-      <div class="row">
-        <div><label>Doctor's name</label><input type="text" id="practiceName" value="Burke Larsen, DC"></div>
-        <div><label>Phone</label><input type="text" id="practicePhone" value="(801) 479-3200"></div>
+      <h2>Actions</h2>
+      <div class="checkbox-row"><input type="checkbox" id="incFindings" checked><label for="incFindings">Include the Findings &amp; Recommendations page when printing (one-sided, nothing on the back)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="incSheet" checked><label for="incSheet">Include the spreadsheet-style financial breakdown page when printing (its own sheet, nothing on the back)</label></div>
+      <div class="btn-bar">
+        <button type="button" id="newPatientBtn" class="secondary">New patient (reset everything)</button>
+        <button type="button" id="copyBtn" class="secondary">Copy plan as text</button>
+        <button type="button" id="printBtn" class="secondary">Print</button>
       </div>
     </div>
+  </div>
 
-    <div class="card">
-      <h2>Care plan phases</h2>
-      <div class="hint">Add a row per frequency phase. Each phase has its own re-exam interval (resets per phase). The last visit of your final phase always doubles as the anniversary exam (billed as a re-exam), and one final report visit — adjustment only — is auto-added right after it. Adjustment is always billed alongside any re-exam/x-ray day; these are never stand-alone visits.</div>
-      <div id="phaseRows"></div>
-      <div class="btn-bar"><button type="button" class="secondary small" id="addPhaseBtn">+ Add phase</button></div>
-    </div>
-
-    <div class="card">
-      <h2>X-rays</h2>
-      <div class="hint">X-rays are tied to WHICH re-exam they happen at — counted across the whole plan in order (re-exam #1, #2, #3...), not to the end of a specific phase. E.g. "x-ray at re-exam #4" fires whenever the 4th re-exam of the plan lands, regardless of which phase it's in.</div>
-      <div id="xrayTriggerRows"></div>
-      <div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" id="addXrayTriggerBtn">+ Add x-ray trigger</button></div>
-      <div id="xrayFinalRow"></div>
-      <div id="reExamRefBox"></div>
-    </div>
-
+  <div>
     <div class="card">
       <h2>Insurance</h2>
       <div class="checkbox-row"><input type="checkbox" id="hasInsurance"><label for="hasInsurance">Patient has insurance to bill (unchecked = straight cash fees throughout)</label></div>
@@ -286,6 +289,46 @@
         <div><label>Max insurance-covered visits (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
         <div><label>Out-of-pocket max remaining ($) — optional</label><input type="text" id="oopRemaining" placeholder="Blank = not tracked"></div>
       </div>
+      <div class="insurance-sub">
+        <div class="row">
+          <div><label>Policy renews (month) — leave blank if it doesn't renew during this plan</label>
+            <select id="renewMonth" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:5px;font-size:13.5px;margin-bottom:10px;">
+              <option value="">Doesn't renew during this plan</option>
+              <option value="1">January (calendar year)</option><option value="2">February</option><option value="3">March</option>
+              <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+              <option value="7">July (state fiscal year)</option><option value="8">August</option><option value="9">September</option>
+              <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+            </select></div>
+          <div><label>Day of month</label><input type="number" id="renewDay" value="1" min="1" max="31" step="1"></div>
+        </div>
+        <div id="renewDetails" style="display:none;">
+          <div class="checkbox-row"><input type="checkbox" id="renewReset" checked><label for="renewReset">Reset the insurance visits at renewal (use the visit allowance again in the new policy year)</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="renewSame" checked><label for="renewSame">Policy details remain the same after renewal (deductible and out-of-pocket max start over at the amounts entered above)</label></div>
+          <div id="renewFields" style="display:none;">
+            <div class="hint" style="margin-top:0;">New policy year — leave any box blank to keep the amount entered above.</div>
+            <div class="row">
+              <div><label>Deductible ($)</label><input type="text" id="rnDeductible"></div>
+              <div><label>Coinsurance (%)</label><input type="text" id="rnCoins"></div>
+            </div>
+            <div class="row">
+              <div><label>Copay ($)</label><input type="text" id="rnCopay"></div>
+              <div><label>X-ray copay ($)</label><input type="text" id="rnCopayXray"></div>
+            </div>
+            <div class="row">
+              <div><label>X-ray coinsurance (%)</label><input type="text" id="rnCoinsXray"></div>
+              <div><label>Max insurance-covered visits</label><input type="text" id="rnVisitCap"></div>
+            </div>
+            <div class="row">
+              <div><label>Out-of-pocket max ($)</label><input type="text" id="rnOop"></div>
+              <div><label>Allowed: adjustment ($)</label><input type="text" id="rnFeeAdj"></div>
+            </div>
+            <div class="row">
+              <div><label>Allowed: re-exam ($)</label><input type="text" id="rnFeeReExam"></div>
+              <div><label>Allowed: x-ray per area ($)</label><input type="text" id="rnFeeXray"></div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="checkbox-row"><input type="checkbox" id="deductibleAppliesToCopay"><label for="deductibleAppliesToCopay">Deductible also applies before the copay (always applies before coinsurance)</label></div>
       <div class="checkbox-row"><input type="checkbox" id="billFullIfZeroCore"><label for="billFullIfZeroCore">Bill full cash fee to patient when allowed amount is $0 (treat as not covered — unchecked means $0 allowed = patient owes $0)</label></div>
       <div class="hint">Coinsurance % is what the PATIENT pays (insurance covers the rest). <strong>A copay is never charged above the insurance-allowed amount for a line — if the copay is higher, the patient owes just the allowed amount; lines with a higher allowed amount (exams, additional services) use the copay.</strong> If x-ray coinsurance is filled in, x-rays use that % instead of any copay, while adjustments and re-exams keep the visit copay. Deductible is one running balance shared across adjustments, re-exams, x-rays, TX Phase, and any insurance-billed bolt-ons. <strong>Priority alternates month by month: within each month, the core plan (adjustments/re-exams/x-rays/TX Phase) claims the deductible first, then that same month's bolt-ons draw on whatever's left, then the next month's core gets first crack at whatever remains, and so on.</strong> Once the visit cap is hit, adjustments, re-exams, AND x-rays all switch to self-pay together — insurance is treated as exhausted for the rest of the plan. <strong>Out-of-pocket max remaining tracks everything the patient actually pays (deductible + copay/coinsurance, across core, TX Phase, and bolt-ons) against that dollar amount — once it's used up, every insurance-billed line switches to $0 patient responsibility for the rest of the plan.</strong> Leave it blank if you don't want to track this.</div>
@@ -302,6 +345,37 @@
           <tr><td>X-ray (per area)</td><td class="num fee-fixed"><b>$30.00</b></td><td class="num"><input type="number" id="feeXrayAllowedPerArea" value="0" min="0" step="0.01" style="margin-bottom:0;"></td></tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="card">
+      <h2>SAVINGS</h2>
+      <div class="hint">Click the plan that applies. Percentages are what the patient is responsible for (not the discount). Savings only apply to self-pay charges — never to anything insurance is covering.</div>
+      <div class="savings-grid" id="savingsGrid"></div>
+      <div class="insurance-sub">
+        <div class="checkbox-row"><input type="checkbox" id="incDenneroll"><label for="incDenneroll">Recommend a Denneroll (spinal orthotic pillow) — $64.35 with tax, quantity 1. Prints on the Findings &amp; Recommendations page only; not part of any month or total.</label></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="full-divider no-print">
+
+<div class="grid no-print">
+  <div>
+    <div class="card">
+      <h2>Care plan phases</h2>
+      <div class="hint">Add a row per frequency phase. Each phase has its own re-exam interval (resets per phase). The last visit of your final phase always doubles as the anniversary exam (billed as a re-exam), and one final report visit — adjustment only — is auto-added right after it. Adjustment is always billed alongside any re-exam/x-ray day; these are never stand-alone visits.</div>
+      <div id="phaseRows"></div>
+      <div class="btn-bar"><button type="button" class="secondary small" id="addPhaseBtn">+ Add phase</button></div>
+    </div>
+
+    <div class="card">
+      <h2>X-rays</h2>
+      <div class="hint">X-rays are tied to WHICH re-exam they happen at — counted across the whole plan in order (re-exam #1, #2, #3...), not to the end of a specific phase. E.g. "x-ray at re-exam #4" fires whenever the 4th re-exam of the plan lands, regardless of which phase it's in.</div>
+      <div id="xrayTriggerRows"></div>
+      <div class="btn-bar" style="margin-bottom:10px;"><button type="button" class="secondary small" id="addXrayTriggerBtn">+ Add x-ray trigger</button></div>
+      <div id="xrayFinalRow"></div>
+      <div id="reExamRefBox"></div>
     </div>
   </div>
 
@@ -323,22 +397,6 @@
       <div id="boltOnRows"></div>
     </div>
 
-    <div class="card">
-      <h2>SAVINGS</h2>
-      <div class="hint">Click the plan that applies. Percentages are what the patient is responsible for (not the discount). Savings only apply to self-pay charges — never to anything insurance is covering.</div>
-      <div class="savings-grid" id="savingsGrid"></div>
-    </div>
-
-    <div class="card">
-      <h2>Actions</h2>
-      <div class="checkbox-row"><input type="checkbox" id="incFindings" checked><label for="incFindings">Include the Findings &amp; Recommendations page when printing (one-sided, nothing on the back)</label></div>
-      <div class="checkbox-row"><input type="checkbox" id="incSheet" checked><label for="incSheet">Include the spreadsheet-style financial breakdown page when printing (its own sheet, nothing on the back)</label></div>
-      <div class="btn-bar">
-        <button type="button" id="newPatientBtn" class="secondary">New patient (reset everything)</button>
-        <button type="button" id="copyBtn" class="secondary">Copy plan as text</button>
-        <button type="button" id="printBtn" class="secondary">Print</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -1466,6 +1524,62 @@
     state.boltOns.forEach(function(b) { boltInsuredCount[b.key] = 0; });
     var txInsuredCount = 0;
 
+    // ---- policy renewal: from the renewal date on, a new policy year applies ----
+    var renewMonth = parseInt($('renewMonth').value, 10) || 0;
+    var renewDay = Math.max(1, Math.min(31, parseInt($('renewDay').value, 10) || 1));
+    var renewResetVisits = $('renewReset').checked;
+    var renewSame = $('renewSame').checked;
+    var planStartStr = $('startDate').value;
+    var planSkipList = parseSkipWeeks();
+    function weekStartDate(w) {
+      if (!saneDate(planStartStr)) return null;
+      var d = addDays(gridStartFor(planStartStr), 7 * (calendarWeekIndex(w, planSkipList) - 1));
+      var rs = new Date(planStartStr + 'T00:00:00');
+      return d < rs ? rs : d;
+    }
+    // policy year 0 = before the first renewal after the start date, 1 = after it, ...
+    function policyYearOf(d) {
+      if (!renewMonth || !d || !saneDate(planStartStr)) return 0;
+      var rs = new Date(planStartStr + 'T00:00:00'), n = 0;
+      for (var y = rs.getFullYear(); y <= rs.getFullYear() + 4; y++) {
+        var R = new Date(y, renewMonth - 1, renewDay);
+        if (R > rs && R <= d) n++;
+      }
+      return n;
+    }
+    function numOrNull(id) { var s = $(id).value.trim(); return s === '' ? null : Math.max(0, parseFloat(s) || 0); }
+    var basePolicy = { coins: coinsurancePct, copay: copayGeneral, copayX: copayXray, coinsX: coinsXray, cap: mainVisitCap,
+      adj: feeAdjAllowed, re: feeReExamAllowed, xr: feeXrayAllowedPerArea, ded: deductibleStart, oop: oopTracked ? runningOOP : null };
+    function policyFor(y) {
+      if (y === 0 || renewSame) return basePolicy;
+      function pick(id, base) { var v = numOrNull(id); return v === null ? base : v; }
+      var capRaw = parseCap($('rnVisitCap').value);
+      var oopNew = numOrNull('rnOop');
+      return {
+        coins: Math.min(100, pick('rnCoins', basePolicy.coins)), copay: pick('rnCopay', basePolicy.copay),
+        copayX: numOrNull('rnCopayXray') !== null ? numOrNull('rnCopayXray') : basePolicy.copayX,
+        coinsX: numOrNull('rnCoinsXray') !== null ? Math.min(100, numOrNull('rnCoinsXray')) : basePolicy.coinsX,
+        cap: $('rnVisitCap').value.trim() === '' ? basePolicy.cap : capRaw,
+        adj: pick('rnFeeAdj', basePolicy.adj), re: pick('rnFeeReExam', basePolicy.re), xr: pick('rnFeeXray', basePolicy.xr),
+        ded: pick('rnDeductible', basePolicy.ded), oop: oopNew !== null ? oopNew : basePolicy.oop
+      };
+    }
+    var curPolicyYear = 0, policyYearState = {};
+    function enterPolicyYear(y) {
+      if (y === curPolicyYear) return;
+      policyYearState[curPolicyYear] = { ded: runningDeductible, oop: runningOOP, main: mainInsuredCount, bolt: boltInsuredCount, tx: txInsuredCount };
+      var p = policyFor(y), s = policyYearState[y];
+      if (!s) {
+        var freshBolt = {}; state.boltOns.forEach(function(b) { freshBolt[b.key] = 0; });
+        s = { ded: p.ded, oop: p.oop, main: 0, bolt: freshBolt, tx: 0 };
+      }
+      runningDeductible = s.ded; runningOOP = s.oop;
+      if (renewResetVisits) { mainInsuredCount = s.main; boltInsuredCount = s.bolt; txInsuredCount = s.tx; }
+      coinsurancePct = p.coins; copayGeneral = p.copay; copayXray = p.copayX; coinsXray = p.coinsX; mainVisitCap = p.cap;
+      feeAdjAllowed = p.adj; feeReExamAllowed = p.re; feeXrayAllowedPerArea = p.xr;
+      curPolicyYear = y;
+    }
+
     function chargeInsuranceLine(allowedAmount, copayAmt, coinsPct, noExtraCharge) {
       // noExtraCharge: explicitly "$0 patient share beyond the deductible" — forces
       // coinsurance-mode-at-0%, ignoring whatever copay/coinsurance values were entered,
@@ -1585,6 +1699,7 @@
       var cm = coreMonths[monthIdx] = coreMonths[monthIdx] || newCoreMonth(monthIdx, wr.weekStart, wr.weekEnd);
 
       wr.visitsHere.forEach(function(v) {
+        enterPolicyYear(policyYearOf(weekStartDate(v.week)));
         if (v.isAnniversary) cm.hasAnniversary = true;
 
         // Free events (e.g. the pregnancy plan's post-due-date exam + x-ray) are fully
@@ -1671,6 +1786,7 @@
 
       state.txPhase.phases.forEach(function(p) {
         if (!p.active || p.billMonth !== monthIdx) return;
+        enterPolicyYear(policyYearOf(weekStartDate(wr.weekStart)));
         var cashFull = CASH.txPhase, owed, bucket;
         var txNotCovered = state.txPhase.billFullIfZero && state.txPhase.allowedAmount <= 0 && !state.txPhase.noExtraCharge;
         if (state.txPhase.billingMode === 'selfpay' || txNotCovered) { owed = cashFull; bucket = 'selfpay'; }
@@ -1694,6 +1810,7 @@
       wr.visitsHere.forEach(function(v) {
         var lines = visitBoltOns[v.visitNum] || [];
         if (!lines.length) return;
+        enterPolicyYear(policyYearOf(weekStartDate(v.week)));
         var bm = boltMonths[monthIdx] = boltMonths[monthIdx] || newBoltMonth(monthIdx, wr.weekStart, wr.weekEnd);
         // A visit with multiple bolt-on services still counts once toward the visit
         // totals; it's an insurance visit if any of that visit's bolt-on lines were billed
@@ -2145,16 +2262,23 @@
     html += '</div>';
 
     html += '<div class="pv-summary-box" style="grid-template-columns:1fr 1fr;background:#e7eff5;">';
+    // The Denneroll is never offered on pregnancy plans.
+    var dennerollOn = $('incDenneroll').checked && state.presetLength !== PREGNANCY_KEY;
+    var renewMo = parseInt($('renewMonth').value, 10) || 0;
+    var renewText = renewMo ? 'Policy renews ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][renewMo - 1] + ' ' + (parseInt($('renewDay').value, 10) || 1) +
+      ($('renewReset').checked ? ' — insurance visits reset' : '') + ($('renewSame').checked ? '' : ' — new policy details apply') : '';
     html += '<div class="col"><h4>Insurance</h4>' +
       (plan.hasInsurance
         ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') + '</div>' +
           '<div>Deductible remaining at start: ' + money(numVal('deductibleRemaining')) + '</div>' +
           '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>' +
           ($('coinsXray').value.trim() !== '' ? '<div>X-ray coinsurance: ' + (parseFloat($('coinsXray').value) || 0) + '%</div>' : '') +
-          (plan.oopTracked ? '<div>Out-of-pocket max remaining: ' + money(numVal('oopRemaining')) + '</div>' : '')
+          (plan.oopTracked ? '<div>Out-of-pocket max remaining: ' + money(numVal('oopRemaining')) + '</div>' : '') +
+          (renewText ? '<div>' + renewText + '</div>' : '')
         : '<div>Self-pay — no insurance billed on this plan</div>') +
       '</div>';
-    html += '<div class="col"><h4>Savings Program</h4><div>' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '</div></div>';
+    html += '<div class="col"><h4>Savings Program</h4><div>' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '</div>' +
+      (dennerollOn ? '<h4 style="margin-top:6px;">Denneroll</h4><div>Spinal orthotic pillow: $64.35 with tax — not included in the monthly totals</div>' : '') + '</div>';
     html += '</div>';
 
     var contFeatures = careKind === 'cont'
@@ -2382,6 +2506,7 @@
     var incSheet = $('incSheet').checked;
     // The findings page is built here but printed FIRST (prepended to the output below).
     var preFindingsHtml = html; html = '';
+    var dennerollTxt = 'Denneroll (spinal orthotic pillow): $64.35 with tax. This cost is not included in the monthly financial breakdown or any plan totals.';
     if (incFindings && careKind === 'cont') {
       // Continued corrective care has its own recommendations page (maintenance has none).
       var contBasis = ['Exam findings', 'Muscle inhibition', 'Postural imbalances', 'Age', 'Phase of vertebral subluxation degeneration', 'Current level of health', 'Restricted motion in your spine', 'Engagement in previous homework to this point'];
@@ -2389,9 +2514,9 @@
         ['Your CONTINUED CORRECTIVE CARE will be as follows: 1 visit per week', 'Each adjustment adds to the next, and maintaining this weekly frequency allows your spine to maintain optimal movement and position.'],
         ['Comparative evaluations – every 12 visits', 'Measure ongoing results, including periodic x-ray re-evaluations.'],
         ['Cervical extension and low tech rehab on traction chair', 'To continue the education and strengthening of core and key muscle groups of the spine and to further facilitate curvature correction of the spine.'],
-        ['Wellness workshops – attend 2 in the first month of recovery, and one every month thereafter', 'To help educate you in home care. Patients achieve faster, longer results when lifestyle changes are implemented outside the office.'],
-        ['Cervical extension by Denneroll – to be completed daily at home', 'Provides faster results if done faithfully and consistently.']
+        ['Wellness workshops – attend 2 in the first month of recovery, and one every month thereafter', 'To help educate you in home care. Patients achieve faster, longer results when lifestyle changes are implemented outside the office.']
       ];
+      if (dennerollOn) contItems.push(['Cervical extension by Denneroll – to be completed daily at home', 'Provides faster results if done faithfully and consistently. ' + dennerollTxt]);
       html += '<div class="pv-page pv-fr pv-fr-preg">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Findings &amp; Recommendations</span></div>';
       html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div></div>';
@@ -2458,11 +2583,12 @@
         html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your initial intensive care</div>' + phaseSlots +
           '<div class="pv-fr-note">Each adjustment builds on the last. Current research shows subluxations tend to fall back to their old behavior every 24–48 hours.</div></div>';
       }
+      var progItems = [['Comparative exams every 8-10 visits', 'To measure ongoing results.']];
+      if (dennerollOn) progItems.push(['Cervical extension with a Denneroll, daily at home', 'Gives faster results when done faithfully and consistently. ' + dennerollTxt]);
+      progItems.push(['Low-tech rehab', 'Educates and strengthens the core and key muscle groups of the spine.']);
+      progItems.push(['Spinal workshops', 'Attend 2 in the first month, then one every month. You\'ll learn home care. Patients get faster, longer-lasting results when they make lifestyle changes outside the office.']);
       html += '<div class="pv-fr-sec"><div class="pv-fr-h">How your program works</div><div class="pv-fr-prog">' +
-        '<div><span class="n">01</span><div><b>Comparative exams every 8-10 visits</b><br>To measure ongoing results.</div></div>' +
-        (isPreg ? '' : '<div><span class="n">02</span><div><b>Cervical extension with a Denneroll, daily at home</b><br>Gives faster results when done faithfully and consistently.</div></div>') +
-        '<div><span class="n">' + (isPreg ? '02' : '03') + '</span><div><b>Low-tech rehab</b><br>Educates and strengthens the core and key muscle groups of the spine.</div></div>' +
-        '<div><span class="n">' + (isPreg ? '03' : '04') + '</span><div><b>Spinal workshops</b><br>Attend 2 in the first month, then one every month. You\'ll learn home care. Patients get faster, longer-lasting results when they make lifestyle changes outside the office.</div></div>' +
+        progItems.map(function(it, i) { return '<div><span class="n">0' + (i + 1) + '</span><div><b>' + it[0] + '</b><br>' + it[1] + '</div></div>'; }).join('') +
         '</div></div>';
       html += '</div>'; // .pv-page
       // Blank sheet so the findings page's back stays empty when the next page is another
@@ -2547,7 +2673,8 @@
         sheetNotes.push('Insurance' + (insurancePlanName ? ': ' + insurancePlanName : '') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') +
           ' · Deductible remaining at start ' + money(numVal('deductibleRemaining')) + ' · Copay ' + money(numVal('copayGeneral')) + ' · Coinsurance ' + ($('coinsurancePct').value || 0) + '%' +
           ($('coinsXray').value.trim() !== '' ? ' · X-ray coinsurance ' + (parseFloat($('coinsXray').value) || 0) + '%' : '') +
-          (plan.oopTracked ? ' · Out-of-pocket max remaining ' + money(numVal('oopRemaining')) : ''));
+          (plan.oopTracked ? ' · Out-of-pocket max remaining ' + money(numVal('oopRemaining')) : '') +
+          (renewText ? ' · ' + renewText : ''));
         sheetNotes.push('Ins Contrib = fees insurance picks up. Co-pay columns = what the patient still owes on insurance-billed visits (deductible, copay, coinsurance).');
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
@@ -2558,7 +2685,7 @@
       html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
       html += '<table class="pv-table pv-sheet-table' + (isPregPrint ? ' pv-sheet-nomo' : '') + '"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Bolt-On Services</th><th class="num">Bolt-On Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Patient Owes</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Bolt-Ons</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Bolt-Ons</th><th class="num">Ins Contrib</th></tr></thead><tbody>' + sheetRows +
         '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.owe) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.ins) + '</td></tr></tfoot></table>';
-      html += '<div class="pv-footnote" style="font-style:normal;font-size:11px;">Patient Owes =Co-pay Chiro + Co-pay Bolt-Ons + Self-pay Chiro + Self-pay Bolt-Ons = Total Fees − Ins Contrib − Savings Amt. ' + sheetNotes.map(escapeHtml).join(' ') + '</div>' +
+      html += '<div class="pv-footnote" style="font-style:normal;font-size:11px;">' + sheetNotes.map(escapeHtml).join(' ') + '</div>' +
         (examVisitText ? '<div class="pv-footnote" style="font-style:normal;font-size:11px;"><b>Exams planned on visits:</b> ' + escapeHtml(examVisitText) + '</div>' : '');
       html += '</div>'; // .pv-page
     }
@@ -2567,12 +2694,21 @@
   }
 
   var lastPlan = null;
-  function recalc() { lastPlan = computePlan(); render(lastPlan); renderPrintView(lastPlan); renderWeekCalendar(lastPlan); renderReExamReference(); }
+  function recalc() {
+    $('incDenneroll').closest('.insurance-sub').style.display = state.presetLength === PREGNANCY_KEY ? 'none' : '';
+    lastPlan = computePlan(); render(lastPlan); renderPrintView(lastPlan); renderWeekCalendar(lastPlan); renderReExamReference(); }
 
   ['patientName', 'startDate', 'practiceName', 'practicePhone', 'insurancePlanName',
    'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
-   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'coinsXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining', 'incFindings', 'incSheet']
+   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'coinsXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining', 'incFindings', 'incSheet',
+   'renewMonth', 'renewDay', 'renewReset', 'renewSame', 'rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray', 'incDenneroll']
     .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
+  function syncRenewUI() {
+    $('renewDetails').style.display = $('renewMonth').value ? '' : 'none';
+    $('renewFields').style.display = ($('renewMonth').value && !$('renewSame').checked) ? '' : 'none';
+  }
+  ['renewMonth', 'renewSame'].forEach(function(id) { $(id).addEventListener('change', syncRenewUI); });
+  syncRenewUI();
 
   // Pregnancy phases are date-driven — recompute them whenever the plan start date
   // changes, but only while the pregnancy preset is actually selected. A 4x/week
@@ -2605,6 +2741,9 @@
     $('coinsurancePct').value = 0; $('copayGeneral').value = 0; $('copayXray').value = ''; $('coinsXray').value = '';
     $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = '';
     $('billFullIfZeroCore').checked = false; $('oopRemaining').value = '';
+    $('renewMonth').value = ''; $('renewDay').value = 1; $('renewReset').checked = true; $('renewSame').checked = true;
+    ['rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray'].forEach(function(id) { $(id).value = ''; });
+    $('incDenneroll').checked = false; syncRenewUI();
     $('feeAdjAllowed').value = 0; $('feeReExamAllowed').value = 0; $('feeXrayAllowedPerArea').value = 0;
     renderPresetTree(); renderPhases(); renderXrayPlan(); renderSkipWeeks(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
   });
