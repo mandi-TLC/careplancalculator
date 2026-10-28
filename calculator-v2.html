@@ -2583,9 +2583,11 @@
       var wk = phaseStarts[pi];
       var cmHit = plan.coreMonths.filter(function(m) { return wk >= m.weekStart && wk <= m.weekEnd; })[0];
       if (!cmHit) return;
+      // A change inside the plan's first month (e.g. the end of the daily start) isn't noted.
+      if (plan.coreMonths.length && cmHit.monthIdx === plan.coreMonths[0].monthIdx) return;
       var txt = p.freeEventBefore
         ? '▶ Care resumes at ' + freqLabelOf(p)
-        : '▶ Frequency change: ' + freqLabelOf(p) + ' begins';
+        : '▶ Planned frequency change to ' + (p.eow ? '1x every other week' : (p.freq >= 5 ? 'daily' : p.freq + 'x/wk'));
       (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push(txt);
     });
     // Planned exam visits, numbered from the first visit of the plan, so nobody has to count.
