@@ -706,7 +706,15 @@
     var p0 = basePhases[0];
     var phases = [];
     if (excess > 0) phases.push({ freq: 4, totalVisits: excess, reExamInterval: 0 });
-    phases.push(Object.assign({}, p0, { bonusAdjustments: budgeted - p0.freq * 2 }));
+    // The daily visits are their own stretch with ONE exam on the last daily visit (which is
+    // this phase's local visit freq x 2, whatever the weekday). The rest of the phase is a
+    // separate stretch spaced 8-10 visits apart, counted from after the daily visits.
+    var dailyEnd = p0.freq * 2;
+    var restSpacing = examSpacing(p0.freq * p0.weeks - dailyEnd);
+    phases.push(Object.assign({}, p0, {
+      bonusAdjustments: budgeted - p0.freq * 2,
+      examOffset: dailyEnd, reExamInterval: restSpacing.interval, examCount: restSpacing.count
+    }));
     return phases.concat(basePhases.slice(1));
   }
 
@@ -1120,7 +1128,7 @@
           phObj.manualInterval = true; delete phObj.examCount;
         } else if ((field === 'freq' || field === 'weeks') && !phObj.manualInterval && !phObj.role && !phObj.totalVisits && !phObj.eow) {
           // keep the exam spacing automatic: recompute for the new visit count
-          var sp = examSpacing((phObj.freq || 0) * (phObj.weeks || 0));
+          var sp = examSpacing((phObj.freq || 0) * (phObj.weeks || 0) - (phObj.examOffset || 0));
           phObj.reExamInterval = sp.interval; phObj.examCount = sp.count;
           var iBox = container.querySelector('input[data-idx="' + idx + '"][data-field="reExamInterval"]');
           if (iBox) iBox.value = sp.interval;
@@ -1599,9 +1607,12 @@
             phaseLocalVisit++;
             // Spaced exams: every `interval` visits up to the stretch's exam count, with the
             // final exam always on the stretch's last visit (so leftover visits sit in the last gap).
-            var spacedHit = interval > 0 && (
-              (phaseLocalVisit % interval === 0 && (!phase.examCount || phaseLocalVisit <= (phase.examCount - 1) * interval)) ||
-              (phase.examCount && phaseLocalVisit === freq * weeks));
+            // examOffset (4x daily starts): an exam on that local visit, then spacing counts from there.
+            var exOff = phase.examOffset || 0;
+            var relVisit = phaseLocalVisit - exOff;
+            var spacedHit = (exOff > 0 && phaseLocalVisit === exOff) || (interval > 0 && (
+              (relVisit > 0 && relVisit % interval === 0 && (!phase.examCount || relVisit <= (phase.examCount - 1) * interval)) ||
+              (phase.examCount && phaseLocalVisit === freq * weeks)));
             var isReExamHere = spacedHit ||
               (phase.examAt && phase.examAt.indexOf(phaseLocalVisit) >= 0) ||
               (phase.examVisitNums && phase.examVisitNums.indexOf(visitNum) >= 0);
