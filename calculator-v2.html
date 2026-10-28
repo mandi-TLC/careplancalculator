@@ -2585,10 +2585,22 @@
       if (!cmHit) return;
       // A change inside the plan's first month (e.g. the end of the daily start) isn't noted.
       if (plan.coreMonths.length && cmHit.monthIdx === plan.coreMonths[0].monthIdx) return;
-      var txt = p.freeEventBefore
-        ? '▶ Care resumes at ' + freqLabelOf(p)
-        : '▶ Planned frequency change to ' + (p.eow ? '1x every other week' : (p.freq >= 5 ? 'daily' : p.freq + 'x/wk'));
-      (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push(txt);
+      var midRow = wk > cmHit.weekStart;
+      var txt;
+      if (p.freeEventBefore) {
+        txt = '▶ Care resumes at ' + freqLabelOf(p);
+      } else if (isPregPrint) {
+        // Pregnancy months are counted back from the due date, so a change can land mid-row:
+        // say how many visits of that row happen first, and print the note under the services.
+        txt = '▶ Frequency change: ' + freqLabelOf(p) + ' begins';
+        if (midRow) {
+          var nBefore = builtVisitsAll.filter(function(v) { return v.monthIdx === cmHit.monthIdx && !v.isReport && v.week < wk; }).length;
+          txt += ' after ' + nBefore + ' visit' + (nBefore === 1 ? '' : 's');
+        }
+      } else {
+        txt = '▶ Planned frequency change to ' + (p.eow ? '1x every other week' : (p.freq >= 5 ? 'daily' : p.freq + 'x/wk'));
+      }
+      (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push({ t: txt, bottom: !!(isPregPrint && midRow && !p.freeEventBefore) });
     });
     // Planned exam visits, numbered from the first visit of the plan, so nobody has to count.
     var examVisitText = builtVisitsAll.filter(function(v) { return v.isReExam; }).map(function(v) {
@@ -2760,8 +2772,10 @@
     var birthNote = skippedWeekNotes(startDateStr).filter(function(n) { return n.pregnancy; })[0];
     rows.forEach(function(r) {
       var isPostBirth = !!(birthNote && plan.postBirthMonthIdx && r.monthIdx === plan.postBirthMonthIdx);
-      var chg = (changeNotes[r.monthIdx] || []).map(function(t) { return '<div class="pv-fchange">' + escapeHtml(t) + '</div>'; }).join('');
-      html += '<tr' + (isPostBirth ? ' class="pv-birth-row"' : '') + '>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + chg + escapeHtml(r.services.join(', ')) + '</td>' +
+      var notesHere = changeNotes[r.monthIdx] || [];
+      var chg = notesHere.filter(function(n) { return !n.bottom; }).map(function(n) { return '<div class="pv-fchange">' + escapeHtml(n.t) + '</div>'; }).join('');
+      var chgBottom = notesHere.filter(function(n) { return n.bottom; }).map(function(n) { return '<div class="pv-fchange" style="margin:2px 0 0;">' + escapeHtml(n.t) + '</div>'; }).join('');
+      html += '<tr' + (isPostBirth ? ' class="pv-birth-row"' : '') + '>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + chg + escapeHtml(r.services.join(', ')) + chgBottom + '</td>' +
         '<td class="num pv-money-col">' + money(r.fullCost) + '</td><td class="num pv-money-col">' + (r.insContribution > 0 ? '−' + money(r.insContribution) : money(0)) + '</td>' +
         '<td class="num pv-money-col">' + (r.savings > 0 ? '−' + money(r.savings) : money(0)) + '</td>' +
         '<td class="num pv-money-col">' + money(r.total) + '</td></tr>';
