@@ -730,7 +730,6 @@
     '6mo': {
       label: '6-Month',
       variants: {
-        '1x': { label: '1x/week start', plan: preset([tier(1, 24)], [], true, 2) },
         '2x': { label: '2x/week start', plan: preset([tier(2, 24)], [{ reExamNumber: 3, areas: 2 }], true, 2) },
         '3x': { label: '3x/week start', plan: preset(P_6MO_3X, [{ reExamNumber: 4, areas: 2 }], true, 2) },
         '4x': { label: '4x/week start (daily, then 3x)', isDaily: true, basePhases: P_6MO_3X, triggers: [{ reExamNumber: 4, areas: 2 }] }
