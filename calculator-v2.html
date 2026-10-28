@@ -81,7 +81,10 @@
        or "Save as PDF" (to save ink) unless a page explicitly opts back in — this
        is what was making the table header/footer shading disappear in print. */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-    body { background: #fff; padding: 0; }
+    html, body { background: #fff; padding: 0; margin: 0; height: auto; min-height: 0; }
+    /* print ONLY the plan: nothing else in the page may take up space after a landscape sheet */
+    body > *:not(#printView) { display: none !important; }
+    #printView { margin: 0; padding: 0; }
     .no-print, #output { display: none !important; }
     #printView { display: block; }
     .card { border: none; padding: 0; margin-bottom: 20px; }
@@ -175,10 +178,14 @@
   .pv-blank { height: 1px; overflow: hidden; color: #fff; font-size: 1px; }
   /* Spreadsheet worksheet prints on its own landscape sheet */
   @page pvsheet { size: landscape; margin: 0.4in; }
-  .pv-sheet { page: pvsheet; }
+  .pv-sheet { page: pvsheet; page-break-after: auto !important; break-after: auto !important; margin: 0; padding: 0; }
+  .pv-sheet .pv-header { margin-bottom: 4px; padding-bottom: 3px; }
+  .pv-sheet .pv-footnote:last-child { margin-bottom: 0; }
+  .pv-sheet table.pv-table { margin-bottom: 2px; }
   table.pv-mo-table { margin-top: 4px; }
   table.pv-mo-table th, table.pv-mo-table td { padding: 2px 6px; }
-  .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 1px 3px; }
+  .pv-sheet-table th, .pv-sheet-table td { font-size: inherit; padding: 1px 2px; }
+  .pv-sheet-table td.num { letter-spacing: -0.2px; }
   .pv-sheet-table td.ctr, .pv-sheet-table th.ctr { text-align: center; width: 3%; }
   .pv-sheet-table td { white-space: nowrap; }
   .pv-sheet-table td.nw, .pv-sheet-table td.wrapok { white-space: normal; }
@@ -3119,7 +3126,7 @@
       }
       sheetNotes.push('Savings program: ' + (savingsOpt.key === 'none' ? 'None / full fee' : savingsOpt.label + ' — ' + (100 - savingsOpt.responsibility) + '% off self-pay charges') + '. Self-pay columns are shown after that savings.');
       if (plan.hasFreeEvent) sheetNotes.push('The post-baby evaluation and x-ray are at Dr. Burke\'s expense and not billed to insurance.');
-      var sz = sheetLineCount > 40 ? 5.5 : (sheetLineCount > 28 ? 6 : 7);
+      var sz = sheetLineCount > 40 ? 5 : (sheetLineCount > 28 ? 5.5 : 6);
       html += '<div class="pv-page pv-sheet" style="font-size:' + sz + 'px;">';
       html += '<div class="pv-header"><div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '" style="max-height:40px;">' : '') + '<span class="pv-title">Care Plan Worksheet — How the Numbers Are Figured</span></div>';
       html += '<div class="pv-header-right">Patient: ' + escapeHtml(name) + ' &nbsp;·&nbsp; Start: ' + (startDateStr || '') + '</div></div>';
