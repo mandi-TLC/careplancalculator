@@ -3316,7 +3316,9 @@
     $('secRenewNone').style.display = hasSec ? 'none' : '';
     $('secRenewBody').style.display = hasSec ? '' : 'none';
     var sig = String(state.presetLength) + '|' + String(state.presetVariant);
-    var standard = !!state.presetLength && state.presetLength !== CUSTOM_KEY && state.presetLength !== PREGNANCY_KEY;
+    // Collapsed unless the plan is Build-my-own or Pregnancy (their phases/exams are hand-set).
+    // With no preset picked yet the default plan is a standard one, so it starts collapsed too.
+    var standard = state.presetLength !== CUSTOM_KEY && state.presetLength !== PREGNANCY_KEY;
     [colPhases, colXray].forEach(function(c) { if (c && (sig !== lastPresetSig)) { c.manual = false; c.set(!standard); } });
     lastPresetSig = sig;
     if (colPhases) colPhases.sum.textContent = 'Filled in by the selected preset (' + (state.phases ? state.phases.length : 0) + ' phase' + ((state.phases && state.phases.length === 1) ? '' : 's') + '). Click the title to edit.';
