@@ -2632,7 +2632,9 @@
     html += '<div class="pv-summary-box">';
     html += '<div class="col"><h4>' + timeframeHead + '</h4>' + (careKind ? '<div>' + (careKind === 'maint' ? Math.max(1, Math.round(((state.phases[0] && state.phases[0].weeks) || 48) / 4)) : 12) + ' Months</div>' : '') + freqRows + '</div>';
     html += '<div class="col"><h4>Intensity</h4>' +
-      (careKind ? '<div><b>4</b> Wellness Workshops (1 per quarter, minimum)</div>' : '') +
+      (careKind ? '<div><b>4</b> Wellness Workshops (1 per quarter, minimum)</div>'
+        // Initial care: 2 workshops in the first month, then 1 for each month after (one per row of the table).
+        : '<div><b>' + (plan.coreMonths.length + 1) + '</b> Wellness Workshops (2 in month 1, then 1 per month)</div>') +
       '<div>' + box(true) + ' Re-Evals &amp; Progress Reports: ' + plan.reExamVisitNums.length + ' (incl. anniversary exam)</div>' +
       '<div>' + box(anyXray) + ' Re-X-Rays: ' + plan.xrayVisitNums.length + '</div>' +
       '<div>' + box(txActive) + ' Traction (TX Chair)</div>' +
