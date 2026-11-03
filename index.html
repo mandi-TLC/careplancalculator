@@ -332,14 +332,15 @@
       </div>
       <div class="row">
         <div><label>Copay ($) — adjustments &amp; re-exams</label><input type="number" id="copayGeneral" value="0" min="0" step="0.01"></div>
-        <div><label>Max insurance-covered visits (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
-      </div>
-      <div class="row">
         <div><label>Allowed: adjustment ($)</label><input type="number" id="feeAdjAllowed" value="0" min="0" step="0.01"></div>
-        <div><label>Allowed: re-exam ($)</label><input type="number" id="feeReExamAllowed" value="0" min="0" step="0.01"></div>
       </div>
       <div class="row">
+        <div><label>Allowed: re-exam ($)</label><input type="number" id="feeReExamAllowed" value="0" min="0" step="0.01"></div>
         <div><label>Allowed: x-ray per area ($)</label><input type="number" id="feeXrayAllowedPerArea" value="0" min="0" step="0.01"></div>
+      </div>
+      <div class="row">
+        <div><label>Visits available now (adj + re-exam combined)</label><input type="text" id="mainVisitCap" placeholder="Blank = unlimited"></div>
+        <div><label>Visits per policy year, in total (used after a renewal)</label><input type="text" id="mainVisitTotal" placeholder="Blank = same as available"></div>
       </div>
       <details class="more" id="insMore"><summary>More options — x-ray copay / coinsurance, out-of-pocket max, $0 allowed rule</summary>
         <div class="row">
@@ -385,7 +386,7 @@
             </div>
             <div class="row">
               <div><label>X-ray coinsurance (%)</label><input type="text" id="rnCoinsXray"></div>
-              <div><label>Max insurance-covered visits</label><input type="text" id="rnVisitCap"></div>
+              <div><label>Visits in the new year (blank = the total per year above)</label><input type="text" id="rnVisitCap"></div>
             </div>
             <div class="row">
               <div><label>Out-of-pocket max ($)</label><input type="text" id="rnOop"></div>
@@ -432,7 +433,10 @@
         </div>
         <div class="row">
           <div><label>Deductible remaining ($)</label><input type="number" id="secDed" value="0" min="0" step="0.01"></div>
-          <div><label>Max visits it covers</label><input type="text" id="secCap" placeholder="Blank = unlimited"></div>
+        </div>
+        <div class="row">
+          <div><label>Visits available now</label><input type="text" id="secCap" placeholder="Blank = unlimited"></div>
+          <div><label>Visits per policy year, in total (used after a renewal)</label><input type="text" id="secCapTotal" placeholder="Blank = same as available"></div>
         </div>
         <div id="secCobWrap">
           <div class="row">
@@ -487,7 +491,7 @@
               </div>
               <div class="row">
                 <div><label>Deductible ($)</label><input type="text" id="snDed"></div>
-                <div><label>Max visits it covers</label><input type="text" id="snCap"></div>
+                <div><label>Visits in the new year (blank = the total per year above)</label><input type="text" id="snCap"></div>
               </div>
               <div class="row">
                 <div><label>Its coinsurance (%)</label><input type="text" id="snCoins"></div>
@@ -1778,8 +1782,12 @@
     var basePolicy = { coins: coinsurancePct, copay: copayGeneral, copayX: copayXray, coinsX: coinsXray, cap: mainVisitCap,
       adj: feeAdjAllowed, re: feeReExamAllowed, xr: feeXrayAllowedPerArea, ded: deductibleStart, oop: oopTracked ? runningOOP : null,
       billFull: billFullIfZeroCore };
+    // After a renewal the visit allowance is the plan's FULL yearly total (when entered), not the
+    // visits that happened to be left at the start of care.
+    var laterBase = Object.assign({}, basePolicy, { cap: $('mainVisitTotal').value.trim() === '' ? basePolicy.cap : parseCap($('mainVisitTotal').value) });
     function policyFor(y) {
-      if (y === 0 || renewSame) return basePolicy;
+      if (y === 0) return basePolicy;
+      if (renewSame) return laterBase;
       function pick(id, base) { var v = numOrNull(id); return v === null ? base : v; }
       var capRaw = parseCap($('rnVisitCap').value);
       var oopNew = numOrNull('rnOop');
@@ -1787,7 +1795,7 @@
         coins: Math.min(100, pick('rnCoins', basePolicy.coins)), copay: pick('rnCopay', basePolicy.copay),
         copayX: numOrNull('rnCopayXray') !== null ? numOrNull('rnCopayXray') : basePolicy.copayX,
         coinsX: numOrNull('rnCoinsXray') !== null ? Math.min(100, numOrNull('rnCoinsXray')) : basePolicy.coinsX,
-        cap: $('rnVisitCap').value.trim() === '' ? basePolicy.cap : capRaw,
+        cap: $('rnVisitCap').value.trim() === '' ? laterBase.cap : capRaw,
         adj: pick('rnFeeAdj', basePolicy.adj), re: pick('rnFeeReExam', basePolicy.re), xr: pick('rnFeeXray', basePolicy.xr),
         ded: pick('rnDeductible', basePolicy.ded), oop: oopNew !== null ? oopNew : basePolicy.oop,
         billFull: $('rnBillFull').value === 'bill' ? true : ($('rnBillFull').value === 'writeoff' ? false : basePolicy.billFull)
@@ -1809,15 +1817,17 @@
       adj: secNum('secFeeAdj'), re: secNum('secFeeReExam'), xr: secNum('secFeeXray'),
       coversDed: $('secCoversDed').checked
     };
+    var secLater = Object.assign({}, secBase, { cap: $('secCapTotal').value.trim() === '' ? secBase.cap : parseCap($('secCapTotal').value) });
     function secPolicyFor(y) {
-      if (y === 0 || secSame) return secBase;
+      if (y === 0) return secBase;
+      if (secSame) return secLater;
       function pickN(id, b) { var v = secNum(id); return v === null ? b : v; }
       var cm = $('snMode').value;
       return {
         mode: cm || secBase.mode,
         pct: Math.min(100, pickN('snPct', secBase.pct)),
         ded: pickN('snDed', secBase.ded),
-        cap: $('snCap').value.trim() === '' ? secBase.cap : parseCap($('snCap').value),
+        cap: $('snCap').value.trim() === '' ? secLater.cap : parseCap($('snCap').value),
         coins: pickN('snCoins', secBase.coins), copay: pickN('snCopay', secBase.copay),
         adj: pickN('snFeeAdj', secBase.adj), re: pickN('snFeeReExam', secBase.re), xr: pickN('snFeeXray', secBase.xr),
         coversDed: $('snCoversDed').value === 'yes' ? true : ($('snCoversDed').value === 'no' ? false : secBase.coversDed)
@@ -2510,6 +2520,9 @@
     var practiceName = $('practiceName').value.trim() || 'Burke Larsen, DC';
     var practicePhone = $('practicePhone').value.trim();
     var visitCap = parseCap($('mainVisitCap').value);
+    var visitTotal = $('mainVisitTotal').value.trim() === '' ? null : parseCap($('mainVisitTotal').value);
+    // e.g. "8 visits available of 20 per year" (the total only shows when it differs)
+    function visitsText(cap, total) { return cap + ' visits available' + (total !== null && total !== cap ? ' of ' + total + ' per year' : ''); }
 
     // Core chiropractic care only — bolt-on/additional services get their own
     // separate page (buildAdditionalServicesPage below), matching the office's
@@ -2688,7 +2701,7 @@
       function sv(id) { return $(id).value.trim(); }
       var modeTxt = { balance: 'pays the remaining balance after the primary', pct: 'pays ' + (parseFloat(sv('secPct')) || 0) + '% of the remaining balance', cob: 'standard coordination of benefits' }[$('secMode').value];
       var out = [];
-      out.push((sv('secName') ? escapeHtml(sv('secName')) + ' — ' : '') + modeTxt + (sv('secCap') !== '' ? ' — ' + (parseInt(sv('secCap'), 10) || 0) + ' visits' : ''));
+      out.push((sv('secName') ? escapeHtml(sv('secName')) + ' — ' : '') + modeTxt + (sv('secCap') !== '' ? ' — ' + (parseInt(sv('secCap'), 10) || 0) + ' visits available' + (sv('secCapTotal') !== '' && (parseInt(sv('secCapTotal'), 10) || 0) !== (parseInt(sv('secCap'), 10) || 0) ? ' of ' + (parseInt(sv('secCapTotal'), 10) || 0) + ' per year' : '') : ''));
       if ($('secBillsUncovered').checked) out.push('Also billed for services the primary does not cover');
       if ($('secBillsAfterCap').checked) out.push('Also billed for visits after the primary\'s visit limit is used up');
       if ((parseFloat(sv('secDed')) || 0) > 0) out.push('Deductible remaining: ' + money(parseFloat(sv('secDed')) || 0));
@@ -2733,7 +2746,7 @@
     var secHeading = $('secType').value === 'medigap' ? 'Medicare Supplement' : 'Secondary Insurance';
     html += '<div class="col"><h4>Insurance</h4>' +
       (plan.hasInsurance
-        ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') + '</div>' +
+        ? '<div>' + (insurancePlanName ? escapeHtml(insurancePlanName) : 'On file') + (visitCap !== null ? ' — ' + visitsText(visitCap, visitTotal) : '') + '</div>' +
           '<div>Deductible remaining at start: ' + money(numVal('deductibleRemaining')) + '</div>' +
           '<div>Copay: ' + money(numVal('copayGeneral')) + ' · Coinsurance: ' + ($('coinsurancePct').value || 0) + '%</div>' +
           ($('copayXray').value.trim() !== '' ? '<div>X-ray copay: ' + money(parseFloat($('copayXray').value) || 0) + '</div>' : '') +
@@ -3141,7 +3154,7 @@
       });
       var sheetNotes = [];
       if (plan.hasInsurance) {
-        sheetNotes.push('Insurance' + (insurancePlanName ? ': ' + insurancePlanName : '') + (visitCap !== null ? ' — ' + visitCap + ' visits allowed' : '') +
+        sheetNotes.push('Insurance' + (insurancePlanName ? ': ' + insurancePlanName : '') + (visitCap !== null ? ' — ' + visitsText(visitCap, visitTotal) : '') +
           ' · Deductible remaining at start ' + money(numVal('deductibleRemaining')) + ' · Copay ' + money(numVal('copayGeneral')) + ' · Coinsurance ' + ($('coinsurancePct').value || 0) + '%' +
           ($('copayXray').value.trim() !== '' ? ' · X-ray copay ' + money(parseFloat($('copayXray').value) || 0) : '') +
           ($('coinsXray').value.trim() !== '' ? ' · X-ray coinsurance ' + (parseFloat($('coinsXray').value) || 0) + '%' : '') +
@@ -3176,10 +3189,10 @@
 
   ['patientName', 'startDate', 'practiceName', 'practicePhone', 'insurancePlanName',
    'feeAdjAllowed', 'feeReExamAllowed', 'feeXrayAllowedPerArea',
-   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'coinsXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'billFullIfZeroCore', 'oopRemaining', 'incFindings', 'incSheet',
+   'hasInsurance', 'deductibleRemaining', 'coinsurancePct', 'copayGeneral', 'copayXray', 'coinsXray', 'deductibleAppliesToCopay', 'mainVisitCap', 'mainVisitTotal', 'billFullIfZeroCore', 'oopRemaining', 'incFindings', 'incSheet',
    'customResp', 'renewMonth', 'renewDay', 'renewReset', 'renewSame', 'rnPlanName', 'rnBillFull', 'rnDeductible', 'rnCoins', 'rnCopay', 'rnCopayXray', 'rnCoinsXray', 'rnVisitCap', 'rnOop', 'rnFeeAdj', 'rnFeeReExam', 'rnFeeXray', 'incDenneroll']
     .forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
-  var SEC_IDS = ['secType', 'secName', 'secMode', 'secPct', 'secDed', 'secCap', 'secCoins', 'secCopay', 'secFeeAdj', 'secFeeReExam', 'secFeeXray', 'secCoversDed', 'secBillsUncovered', 'secBillsAfterCap',
+  var SEC_IDS = ['secType', 'secName', 'secMode', 'secPct', 'secDed', 'secCap', 'secCapTotal', 'secCoins', 'secCopay', 'secFeeAdj', 'secFeeReExam', 'secFeeXray', 'secCoversDed', 'secBillsUncovered', 'secBillsAfterCap',
     'secRenewMonth', 'secRenewDay', 'secRenewReset', 'secRenewSame', 'snName', 'snMode', 'snPct', 'snDed', 'snCap', 'snCoins', 'snCopay', 'snFeeAdj', 'snFeeReExam', 'snFeeXray', 'snCoversDed'];
   SEC_IDS.forEach(function(id) { var el = $(id); el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
   function syncSecUI() {
@@ -3234,7 +3247,7 @@
     $('insurancePlanName').value = '';
     $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
     $('coinsurancePct').value = 0; $('copayGeneral').value = 0; $('copayXray').value = ''; $('coinsXray').value = '';
-    $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = '';
+    $('deductibleAppliesToCopay').checked = false; $('mainVisitCap').value = ''; $('mainVisitTotal').value = ''; $('secCapTotal').value = '';
     $('billFullIfZeroCore').checked = false; $('oopRemaining').value = '';
     $('renewMonth').value = ''; $('renewDay').value = 1; $('renewReset').checked = true; $('renewSame').checked = true;
     $('rnBillFull').value = '';
