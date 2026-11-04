@@ -131,6 +131,14 @@
   table.pv-table td.pv-money-col, table.pv-table th.pv-money-col { width: 13%; }
   table.pv-table td.pv-money-col { white-space: nowrap; }
   table.pv-table tfoot td { font-weight: 700; background: #fff; }
+  .pv-compact { font-size: 10.5px; }
+  .pv-compact .pv-header { margin-bottom: 4px; padding-bottom: 3px; }
+  .pv-compact .pv-disclaimer { line-height: 1.15; margin-bottom: 3px; font-size: 10px; }
+  .pv-compact .pv-summary-box { padding: 3px 8px; margin-bottom: 3px; gap: 6px; }
+  .pv-compact .pv-features { line-height: 1.15; margin-bottom: 3px; font-size: 10px; }
+  .pv-compact table.pv-table th, .pv-compact table.pv-table td { padding: 2px 5px; }
+  .pv-compact .pv-footnote { margin-top: 2px; }
+  .pv-compact .pv-signed-row { margin-top: 36px; }
   .pv-signed-row { display: flex; gap: 40px; margin-top: 44px; }
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
   .pv-footnote { font-style: italic; color: #333; margin-top: 4px; }
@@ -296,9 +304,7 @@
       <div class="checkbox-row"><input type="checkbox" id="reviseOn"><label for="reviseOn">Revised plan — the patient is changing frequency mid-care (build the ORIGINAL plan above first, with the original start date and insurance, then turn this on)</label></div>
       <div id="reviseBody" style="display:none;">
         <div class="row">
-          <div><label>Revised as of (date the new frequency starts)</label><input type="date" id="reviseDate"></div>
-          <div><label>Paid so far ($)</label><input type="number" id="paidSoFar" min="0" step="0.01" placeholder="Optional"></div>
-        </div>
+          <div><label>Revised as of (date the new frequency starts)</label><input type="date" id="reviseDate"></div>        </div>
         <div class="hint">Pick the date the new frequency starts. The weeks before it are laid out as 4-week periods (the last one may be part of a month), matching the original dates. Enter the visits, exams and x-ray areas actually used in each period (they start filled in with what the original plan expected). Then set the NEW frequency in Care plan phases below. Every-other-week is available there for revised plans.</div>
         <div id="reviseWeeksNote" class="hint" style="margin-top:0;"></div>
         <div id="reviseRows"></div>
@@ -2698,13 +2704,16 @@
     }).join('') + '<div>Final report visit — 1 adjustment</div>' + '<div style="margin-top:3px;"><b>TOTAL: ' + totalAdjustments + ' adjustments</b></div>';
 
     var html = '';
-    html += '<div class="pv-page">';
+    // Revised plans carry extra rows and notes, so the page is set a little tighter to stay on one sheet.
+    html += '<div class="pv-page' + (state.revise.on ? ' pv-compact' : '') + '">';
 
     html += '<div class="pv-header">';
     html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">' + coreTitle + '</span></div>';
     html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
     html += '</div>';
-    html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
+    // a revised plan shows the date it was revised, not the original start date
+    var headDate = (state.revise.on && saneDate($('reviseDate').value)) ? $('reviseDate').value : (startDateStr || '');
+    html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + headDate + '</span></div></div>';
     html += '<div class="pv-disclaimer">' + disclaimerText + '</div>';
 
     html += '<div class="pv-summary-box">';
@@ -2720,12 +2729,6 @@
       '</div>';
     html += '<div class="col"><h4>Estimated Finances</h4>' +
       '<div><b>' + money(plan.coreGrand.total) + '</b> total estimated cost to you' + (boltActive ? ' (chiropractic care only — see attached for additional services)' : '') + '</div>' +
-      (function() {
-        var paid = numVal('paidSoFar');
-        if (!state.revise.on || !(paid > 0)) return '';
-        var rem = plan.combinedGrandTotal - paid;
-        return '<div>Paid so far: <b>' + money(paid) + '</b></div><div>' + (rem >= 0 ? 'Remaining balance' : 'Credit on account') + ': <b>' + money(Math.abs(rem)) + '</b>' + (boltActive ? ' (all services)' : '') + '</div>';
-      })() +
       '<h4 style="margin-top:6px;">Estimated Savings</h4>' +
       '<div>' + box(totalInsuranceSavings > 0) + ' Insurance Contribution: ' + money(totalInsuranceSavings) + '</div>' +
       '<div>' + box(state.savingsKey === 'admin') + ' Administrative Savings</div>' +
@@ -2869,7 +2872,7 @@
     html += '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Estimated Totals</td><td class="num pv-money-col">' + money(totals.fullCost) + '</td><td class="num pv-money-col">' + (totals.insContribution > 0 ? '−' + money(totals.insContribution) : money(0)) + '</td><td class="num pv-money-col">' + (totals.savings > 0 ? '−' + money(totals.savings) : money(0)) + '</td><td class="num pv-money-col">' + money(totals.total) + '</td></tr></tfoot></table>';
 
     if (revW) {
-      html += '<div class="pv-footnote" style="font-style:normal;"><b>Revised plan:</b> weeks 1&ndash;' + revW + (revK ? ' (months 1&ndash;' + revK + (revW % 4 ? ' and part of month ' + (revK + 1) : '') + ')' : '') + ' show the visits actually used; the rest is planned at the new frequency.</div>';
+      html += '<div class="pv-footnote" style="font-style:normal;"><b>Revised plan:</b> weeks 1&ndash;' + revW + ' show the visits actually used; the rest is planned at the new frequency.</div>';
     }
     if (examVisitText) {
       html += '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits (counted from the first visit of this plan):</b> ' + escapeHtml(examVisitText) + '</div>';
@@ -2959,7 +2962,7 @@
       html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Additional Services — Financials and Informed Consent</span></div>';
       html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
       html += '</div>';
-      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
+      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + headDate + '</span></div></div>';
       html += '<div class="pv-disclaimer">Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.</div>';
 
       html += '<div class="pv-summary-box" style="grid-template-columns:1fr 1fr;">';
@@ -3131,7 +3134,8 @@
           'Support your recovery after baby arrives', 'Keep baby\'s transition into the world as smooth as possible']) + '</div>';
         var dueTxt = state.dueDate ? fmtShortDate(new Date(state.dueDate + 'T00:00:00')) : '';
         html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your care schedule' + (dueTxt ? ' — estimated due date ' + dueTxt : '') + '</div>' +
-          '<div class="pv-fr-slot"><b>1st &amp; 2nd trimesters:</b> 1 visit per week</div>' +
+          // a patient who starts care in her 3rd trimester has no 1x/week stretch, so it isn't mentioned
+          (state.phases.some(function(p) { return p.role === 'pre1' && (p.weeks || 0) > 0; }) ? '<div class="pv-fr-slot"><b>1st &amp; 2nd trimesters:</b> 1 visit per week</div>' : '') +
           '<div class="pv-fr-slot"><b>3rd trimester:</b> 2 visits per week</div>' +
           '<div class="pv-fr-slot"><b>4th trimester (after baby arrives):</b> 2 visits per week for 4 weeks, then 1 visit per week for 8 weeks</div>' +
           '<div class="pv-fr-note">Each adjustment builds on the last, keeping your body in better balance through every stage.</div></div>';
@@ -3318,7 +3322,7 @@
     state.boltOns = freshBoltOns();
     state.txPhase = freshTxPhase();
     state.presetLength = null; state.presetVariant = null; state.dueDate = null; state.pregExams = {};
-    state.revise = { on: false, rows: [], orig: [], saved: null }; $('paidSoFar').value = ''; $('reviseDate').value = ''; $('incFindings').checked = true;
+    state.revise = { on: false, rows: [], orig: [], saved: null }; $('reviseDate').value = ''; $('incFindings').checked = true;
     $('patientName').value = ''; $('startDate').value = '';
     $('insurancePlanName').value = '';
     $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
@@ -3474,7 +3478,6 @@
     if (w === null) return;
     setReviseK(w);
   });
-  $('paidSoFar').addEventListener('input', recalc);
 
   // ---- UI simplification: tabs, collapsibles, info toggles, sticky bar (no data is stored in the browser) ----
   document.querySelectorAll('.tabs').forEach(function(bar) {
