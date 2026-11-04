@@ -131,6 +131,14 @@
   table.pv-table td.pv-money-col, table.pv-table th.pv-money-col { width: 13%; }
   table.pv-table td.pv-money-col { white-space: nowrap; }
   table.pv-table tfoot td { font-weight: 700; background: #fff; }
+  .pv-compact { font-size: 10.5px; }
+  .pv-compact .pv-header { margin-bottom: 4px; padding-bottom: 3px; }
+  .pv-compact .pv-disclaimer { line-height: 1.15; margin-bottom: 3px; font-size: 10px; }
+  .pv-compact .pv-summary-box { padding: 3px 8px; margin-bottom: 3px; gap: 6px; }
+  .pv-compact .pv-features { line-height: 1.15; margin-bottom: 3px; font-size: 10px; }
+  .pv-compact table.pv-table th, .pv-compact table.pv-table td { padding: 2px 5px; }
+  .pv-compact .pv-footnote { margin-top: 2px; }
+  .pv-compact .pv-signed-row { margin-top: 36px; }
   .pv-signed-row { display: flex; gap: 40px; margin-top: 44px; }
   .pv-signed-row .pv-line { flex: 1; border-top: 1px solid #333; padding-top: 3px; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
   .pv-footnote { font-style: italic; color: #333; margin-top: 4px; }
@@ -283,12 +291,24 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardPreset">
       <h2>Care plan preset</h2>
       <div class="hint">Pick the doctor's recommended plan to pre-fill the phases and x-ray timing below. Insurance, bolt-ons, and SAVINGS are still entered manually for every plan. Switching presets overwrites the phases/x-ray sections — any manual edits made below will be replaced.</div>
       <div id="presetLengthRow" class="savings-grid" style="margin-bottom:10px;"></div>
       <div id="presetVariantRow" class="savings-grid"></div>
       <div id="presetDueDateRow"></div>
+    </div>
+
+    <div class="card" id="cardRevise">
+      <h2>Revise an existing plan</h2>
+      <div class="checkbox-row"><input type="checkbox" id="reviseOn"><label for="reviseOn">Revised plan — the patient is changing frequency mid-care (build the ORIGINAL plan above first, with the original start date and insurance, then turn this on)</label></div>
+      <div id="reviseBody" style="display:none;">
+        <div class="row">
+          <div><label>Revised as of (date the new frequency starts)</label><input type="date" id="reviseDate"></div>        </div>
+        <div class="hint">Pick the date the new frequency starts. The weeks before it are laid out as 4-week periods (the last one may be part of a month), matching the original dates. Enter the visits, exams and x-ray areas actually used in each period (they start filled in with what the original plan expected). Then set the NEW frequency in Care plan phases below. Every-other-week is available there for revised plans.</div>
+        <div id="reviseWeeksNote" class="hint" style="margin-top:0;"></div>
+        <div id="reviseRows"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -874,8 +894,11 @@
     savingsKey: 'none',
     boltOns: freshBoltOns(),
     txPhase: freshTxPhase(),
-    presetLength: null, presetVariant: null, dueDate: null, pregExams: {}
+    presetLength: null, presetVariant: null, dueDate: null, pregExams: {},
+    // Revised plan: completed months come from actual visit counts, later months from the new phases.
+    revise: { on: false, rows: [], orig: [], saved: null }
   };
+  function phaseVisitTotal(ph) { return ph.eow ? Math.ceil((ph.weeks || 0) / 2) : (ph.freq || 0) * (ph.weeks || 0); }
 
   // ---- care plan preset tree ----
   var PREGNANCY_KEY = '__pregnancy__', BABY_KEY = '__baby__', CUSTOM_KEY = '__custom__';
@@ -1116,7 +1139,7 @@
           '<div><label>Duration (weeks)</label><input type="number" min="0" step="1" value="' + (phase.weeks != null ? phase.weeks : '') + '" data-idx="' + idx + '" data-field="weeks"' + (phase.totalVisits ? ' placeholder="fixed visit count"' : '') + '></div>' +
           examCtl +
         '</div>' + examExtra +
-        (state.presetLength === MAINT_KEY ? '<label style="display:flex;align-items:center;gap:6px;font-weight:500;margin:2px 0 6px;"><input type="checkbox" style="width:auto;margin:0;" data-eow="' + idx + '"' + (phase.eow ? ' checked' : '') + '> Every other week (1 visit every 2 weeks) — set Duration above to the number of calendar weeks you want, e.g. 24 weeks = 12 visits</label>' : '') +
+        ((state.presetLength === MAINT_KEY || state.revise.on) ? '<label style="display:flex;align-items:center;gap:6px;font-weight:500;margin:2px 0 6px;"><input type="checkbox" style="width:auto;margin:0;" data-eow="' + idx + '"' + (phase.eow ? ' checked' : '') + '> Every other week (1 visit every 2 weeks) — set Duration above to the number of calendar weeks you want, e.g. 24 weeks = 12 visits</label>' : '') +
         (phase.totalVisits ? '<div class="hint">This phase is a fixed ' + phase.totalVisits + '-visit block (part of a 4x/week daily start) rather than a weeks × frequency block.</div>' : '') +
         (phase.bonusAdjustments ? '<div class="hint">Includes ' + phase.bonusAdjustments + ' bonus adjustment visit(s) from the daily front-load, sharing this phase’s first week.</div>' : '');
       container.appendChild(block);
@@ -1129,9 +1152,9 @@
         if (field === 'reExamInterval') {
           // typed by hand: respect it exactly (no automatic spacing for this phase)
           phObj.manualInterval = true; delete phObj.examCount;
-        } else if ((field === 'freq' || field === 'weeks') && !phObj.manualInterval && !phObj.role && !phObj.totalVisits && !phObj.eow) {
+        } else if ((field === 'freq' || field === 'weeks') && !phObj.manualInterval && !phObj.role && !phObj.totalVisits && (state.presetLength !== MAINT_KEY)) {
           // keep the exam spacing automatic: recompute for the new visit count
-          var sp = examSpacing((phObj.freq || 0) * (phObj.weeks || 0) - (phObj.examOffset || 0));
+          var sp = examSpacing(phaseVisitTotal(phObj) - (phObj.examOffset || 0));
           phObj.reExamInterval = sp.interval; phObj.examCount = sp.count;
           var iBox = container.querySelector('input[data-idx="' + idx + '"][data-field="reExamInterval"]');
           if (iBox) iBox.value = sp.interval;
@@ -1176,7 +1199,12 @@
     });
     container.querySelectorAll('[data-eow]').forEach(function(cb) {
       cb.addEventListener('change', function() {
-        state.phases[+cb.getAttribute('data-eow')].eow = cb.checked;
+        var ePh = state.phases[+cb.getAttribute('data-eow')];
+        ePh.eow = cb.checked;
+        if (state.presetLength !== MAINT_KEY && !ePh.manualInterval && !ePh.role) {
+          var eSp = examSpacing(phaseVisitTotal(ePh)); ePh.reExamInterval = eSp.interval; ePh.examCount = eSp.count;
+          renderPhases();
+        }
         recalc();
       });
     });
@@ -1548,6 +1576,36 @@
       });
     }
 
+    // Revised plan: completed 4-week months are built from what actually happened (counts the
+    // office entered), spread across that month's weeks. The new phases then continue after them.
+    if (state.revise && state.revise.on && state.revise.rows.length && preBirthWeeks === 0) {
+      var revBase = 0;
+      state.revise.rows.forEach(function(r, m) {
+        var n = Math.max(0, Math.round(r.adj || 0)), ex = Math.min(n, Math.max(0, Math.round(r.reexam || 0)));
+        var xa = Math.max(0, Math.round(r.xray || 0));
+        var rw = Math.max(1, r.weeks || 4);   // a row is a 4-week month, or the first part of one
+        var made = [];
+        for (var ai = 0; ai < n; ai++) {
+          visitNum++;
+          var avWeek = revBase + 1 + Math.floor(ai * rw / n);
+          var av = {
+            visitNum: visitNum, week: avWeek, monthIdx: Math.ceil(avWeek / 4),
+            isReExam: false, isXray: false, xrayAreas: 0, isAnniversary: false, isReport: false,
+            reEvalUnits: 1, isActual: true, phaseIdx: 0
+          };
+          visits.push(av); made.push(av); lastVisitObj = av;
+        }
+        // exams go on the last visits of the month; x-rays ride along with the first exam
+        for (var ei = 0; ei < ex; ei++) made[n - 1 - ei].isReExam = true;
+        if (xa > 0 && made.length) {
+          var xv = ex > 0 ? made[n - ex] : made[n - 1];
+          xv.isXray = true; xv.xrayAreas = xa;
+        }
+        revBase += rw;
+      });
+      week = revBase;
+    }
+
     state.phases.forEach(function(phase, phaseI) {
       var phaseStartLen = visits.length;
       var freq = Math.max(0, phase.freq || 0);
@@ -1615,7 +1673,7 @@
             var relVisit = phaseLocalVisit - exOff;
             var spacedHit = (exOff > 0 && phaseLocalVisit === exOff) || (interval > 0 && (
               (relVisit > 0 && relVisit % interval === 0 && (!phase.examCount || relVisit <= (phase.examCount - 1) * interval)) ||
-              (phase.examCount && phaseLocalVisit === freq * weeks)));
+              (phase.examCount && phaseLocalVisit === phaseVisitTotal(phase))));
             var isReExamHere = spacedHit ||
               (phase.examAt && phase.examAt.indexOf(phaseLocalVisit) >= 0) ||
               (phase.examVisitNums && phase.examVisitNums.indexOf(visitNum) >= 0);
@@ -1661,7 +1719,8 @@
     var reExamCounter = 0;
     var reExamVisits = [];
     visits.forEach(function(v) {
-      if (v.isReExam) { reExamCounter++; v.reExamNumber = reExamCounter; reExamVisits.push(v); }
+      // (revised plans: x-ray triggers count only the planned exams, not the actual past ones)
+      if (v.isReExam) { reExamCounter++; v.reExamNumber = reExamCounter; if (!v.isActual) reExamVisits.push(v); }
     });
     (state.xrayPlan.triggers || []).forEach(function(t) {
       var target = reExamVisits[t.reExamNumber - 1];
@@ -2537,6 +2596,8 @@
       if (cm.hasAnniversary) services.push('Anniversary Exam');
       if (cm.xrayCount) services.push(cm.xrayCount + ' Re-X-Ray' + (cm.xrayCount === 1 ? '' : 's'));
       if (cm.txPhaseCount) services.push(cm.txPhaseCount + ' TX Chair');
+      // Revised plan: completed months are what was actually used
+      if (state.revise.on && cm.monthIdx <= Math.floor((state.revise.weeks || 0) / 4) && services.length) services[0] = 'Actual: ' + services[0];
       return {
         monthIdx: cm.monthIdx,
         dateRange: calendarRangeForWeeks(cm.weekStart, cm.weekEnd, startDateStr, skipList),
@@ -2563,7 +2624,7 @@
     // Continued corrective care and maintenance care use their own wording; maintenance
     // has no Findings & Recommendations page at all.
     var careKind = state.presetLength === MAINT_KEY ? 'maint' : (state.presetLength === CONTINUED_KEY ? 'cont' : '');
-    var coreTitle = careKind === 'maint' ? 'Recommendations for Maintenance Care'
+    var coreTitle = state.revise.on ? 'Revised Plan of Care' : careKind === 'maint' ? 'Recommendations for Maintenance Care'
       : (careKind === 'cont' ? 'Recommendations for Continued Corrective Care' : 'Recommendations for Initial Intensive Care');
     var timeframeHead = careKind === 'maint' ? 'Maintenance Care Timeframe' : (careKind === 'cont' ? 'Continued Corrective Care Timeframe' : 'Initial Care Timeframe');
     var disclaimerText = careKind
@@ -2571,12 +2632,16 @@
       : 'Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.';
     // Real visit counts per phase (visits lost to pregnancy-plan closures already removed)
     var builtVisitsAll = buildVisits().visits;
-    function phaseActualCount(pi) { return builtVisitsAll.filter(function(v) { return v.phaseIdx === pi && !v.isReport; }).length; }
-    var totalAdjustments = state.phases.reduce(function(sum, p, pi) { return sum + phaseActualCount(pi); }, 0) + 1; // +1 = the auto-added final report visit
+    function phaseActualCount(pi) { return builtVisitsAll.filter(function(v) { return v.phaseIdx === pi && !v.isReport && !v.isActual; }).length; }
+    // Revised plan: the completed months (actual visits) are listed separately from the new phases.
+    var revW = state.revise.on ? (state.revise.weeks || 0) : 0;   // weeks completed
+    var revK = Math.floor(revW / 4);                                // full completed months
+    var revActualAdj = builtVisitsAll.filter(function(v) { return v.isActual; }).length;
+    var totalAdjustments = state.phases.reduce(function(sum, p, pi) { return sum + phaseActualCount(pi); }, 0) + revActualAdj + 1; // +1 = the auto-added final report visit
     var isPregPrint = state.presetLength === PREGNANCY_KEY;
     // Plan week each phase begins (a free post-baby visit takes the week just before its phase).
     var phaseStarts = [];
-    var wkCur = 0;
+    var wkCur = revW;
     state.phases.forEach(function(p) {
       phaseStarts.push(wkCur + 1);
       wkCur += p.totalVisits ? Math.ceil(p.totalVisits / Math.max(1, p.freq)) : (p.weeks || 0);
@@ -2591,16 +2656,24 @@
     // Frequency-change markers: month number -> note lines shown inside that month's row.
     var changeNotes = {};
     state.phases.forEach(function(p, pi) {
-      if (pi === 0) return;
+      if (pi === 0 && !revW) return;
       var wk = phaseStarts[pi];
       var cmHit = plan.coreMonths.filter(function(m) { return wk >= m.weekStart && wk <= m.weekEnd; })[0];
       if (!cmHit) return;
       // A change inside the plan's first month (e.g. the end of the daily start) isn't noted.
-      if (plan.coreMonths.length && cmHit.monthIdx === plan.coreMonths[0].monthIdx) return;
+      if (plan.coreMonths.length && cmHit.monthIdx === plan.coreMonths[0].monthIdx && !(pi === 0 && revW)) return;
       var midRow = wk > cmHit.weekStart;
       var txt;
       if (p.freeEventBefore) {
         txt = '▶ Care resumes at ' + freqLabelOf(p);
+      } else if (pi === 0 && revW) {
+        // Revised plan: the new schedule may start partway through a month. It was the
+        // patient's request, not a recommendation, so it says "Requested" (later changes stay "Planned").
+        txt = '▶ Requested frequency change to ' + (p.eow ? '1x every other week' : (p.freq >= 5 ? 'daily' : p.freq + 'x/wk'));
+        if (midRow) {
+          var nBeforeR = builtVisitsAll.filter(function(v) { return v.monthIdx === cmHit.monthIdx && !v.isReport && v.week < wk; }).length;
+          txt += ' after ' + nBeforeR + ' visit' + (nBeforeR === 1 ? '' : 's');
+        }
       } else if (isPregPrint) {
         // Pregnancy months are counted back from the due date, so a change can land mid-row:
         // say how many visits of that row happen first, and print the note under the services.
@@ -2612,14 +2685,14 @@
       } else {
         txt = '▶ Planned frequency change to ' + (p.eow ? '1x every other week' : (p.freq >= 5 ? 'daily' : p.freq + 'x/wk'));
       }
-      (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push({ t: txt, bottom: !!(isPregPrint && midRow && !p.freeEventBefore) });
+      (changeNotes[cmHit.monthIdx] = changeNotes[cmHit.monthIdx] || []).push({ t: txt, bottom: !!((isPregPrint || (pi === 0 && revW)) && midRow && !p.freeEventBefore) });
     });
     // Planned exam visits, numbered from the first visit of the plan, so nobody has to count.
     var examVisitText = builtVisitsAll.filter(function(v) { return v.isReExam; }).map(function(v) {
       var tag = v.isFreeEvent ? ' (post-baby exam + x-ray at Dr. Burke\'s expense)' : (v.isAnniversary ? ' (anniversary exam)' : (v.isXray ? ' (+ x-ray)' : ''));
       return '#' + v.visitNum + tag;
     }).join(', ');
-    var freqRows = state.phases.map(function(p, pi) {
+    var freqRows = (revW ? '<div>Weeks 1&ndash;' + revW + ': actual visits used &mdash; ' + revActualAdj + ' adjustments</div>' : '') + state.phases.map(function(p, pi) {
       var label = freqLabelOf(p);
       var span = p.totalVisits ? 'part of a week' : (p.weeks + ' weeks');
       var birthLine = '';
@@ -2632,13 +2705,16 @@
     }).join('') + '<div>Final report visit — 1 adjustment</div>' + '<div style="margin-top:3px;"><b>TOTAL: ' + totalAdjustments + ' adjustments</b></div>';
 
     var html = '';
-    html += '<div class="pv-page">';
+    // Revised plans carry extra rows and notes, so the page is set a little tighter to stay on one sheet.
+    html += '<div class="pv-page' + (state.revise.on ? ' pv-compact' : '') + '">';
 
     html += '<div class="pv-header">';
     html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">' + coreTitle + '</span></div>';
     html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
     html += '</div>';
-    html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
+    // a revised plan shows the date it was revised, not the original start date
+    var headDate = (state.revise.on && saneDate($('reviseDate').value)) ? $('reviseDate').value : (startDateStr || '');
+    html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + headDate + '</span></div></div>';
     html += '<div class="pv-disclaimer">' + disclaimerText + '</div>';
 
     html += '<div class="pv-summary-box">';
@@ -2646,7 +2722,7 @@
     html += '<div class="col"><h4>Intensity</h4>' +
       (careKind ? '<div><b>4</b> Wellness Workshops (1 per quarter, minimum)</div>'
         // Initial care: 2 workshops in the first month, then 1 for each month after (one per row of the table).
-        : '<div><b>' + (plan.coreMonths.length + 1) + '</b> Wellness Workshops (2 in month 1, then 1 per month)</div>') +
+        : (state.revise.on ? '' : '<div><b>' + (plan.coreMonths.length + 1) + '</b> Wellness Workshops (2 in month 1, then 1 per month)</div>')) +
       '<div>' + box(true) + ' Re-Evals &amp; Progress Reports: ' + plan.reExamVisitNums.length + ' (incl. anniversary exam)</div>' +
       '<div>' + box(anyXray) + ' Re-X-Rays: ' + plan.xrayVisitNums.length + '</div>' +
       '<div>' + box(txActive) + ' Traction (TX Chair)</div>' +
@@ -2796,6 +2872,9 @@
     });
     html += '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Estimated Totals</td><td class="num pv-money-col">' + money(totals.fullCost) + '</td><td class="num pv-money-col">' + (totals.insContribution > 0 ? '−' + money(totals.insContribution) : money(0)) + '</td><td class="num pv-money-col">' + (totals.savings > 0 ? '−' + money(totals.savings) : money(0)) + '</td><td class="num pv-money-col">' + money(totals.total) + '</td></tr></tfoot></table>';
 
+    if (revW) {
+      html += '<div class="pv-footnote" style="font-style:normal;"><b>Revised plan:</b> weeks 1&ndash;' + revW + ' show the visits actually used; the rest is planned at the new frequency.</div>';
+    }
     if (examVisitText) {
       html += '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits (counted from the first visit of this plan):</b> ' + escapeHtml(examVisitText) + '</div>';
     }
@@ -2884,7 +2963,7 @@
       html += '<div class="pv-header-left">' + (LOGO_DATA_URI ? '<img class="pv-logo" src="' + LOGO_DATA_URI + '">' : '') + '<span class="pv-title">Additional Services — Financials and Informed Consent</span></div>';
       html += '<div class="pv-header-right">' + escapeHtml(practiceName) + (practicePhone ? '<br>' + escapeHtml(practicePhone) : '') + '</div>';
       html += '</div>';
-      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + (startDateStr || '') + '</span></div></div>';
+      html += '<div class="pv-patient-row"><div>Patient Name: <span class="pv-fill">' + escapeHtml(name) + '</span></div><div>Date: <span class="pv-fill">' + headDate + '</span></div></div>';
       html += '<div class="pv-disclaimer">Recommendations are based on findings from your consultation, evaluation and x-rays, along with how long subluxations have been present and what phase of degeneration they are in, your history of traumas, as well as age and overall health. All recommendations are an estimation based on education and clinical experience and take into account patient participation and follow-through in their own care.</div>';
 
       html += '<div class="pv-summary-box" style="grid-template-columns:1fr 1fr;">';
@@ -3056,7 +3135,8 @@
           'Support your recovery after baby arrives', 'Keep baby\'s transition into the world as smooth as possible']) + '</div>';
         var dueTxt = state.dueDate ? fmtShortDate(new Date(state.dueDate + 'T00:00:00')) : '';
         html += '<div class="pv-fr-sec"><div class="pv-fr-h">Your care schedule' + (dueTxt ? ' — estimated due date ' + dueTxt : '') + '</div>' +
-          '<div class="pv-fr-slot"><b>1st &amp; 2nd trimesters:</b> 1 visit per week</div>' +
+          // a patient who starts care in her 3rd trimester has no 1x/week stretch, so it isn't mentioned
+          (state.phases.some(function(p) { return p.role === 'pre1' && (p.weeks || 0) > 0; }) ? '<div class="pv-fr-slot"><b>1st &amp; 2nd trimesters:</b> 1 visit per week</div>' : '') +
           '<div class="pv-fr-slot"><b>3rd trimester:</b> 2 visits per week</div>' +
           '<div class="pv-fr-slot"><b>4th trimester (after baby arrives):</b> 2 visits per week for 4 weeks, then 1 visit per week for 8 weeks</div>' +
           '<div class="pv-fr-note">Each adjustment builds on the last, keeping your body in better balance through every stage.</div></div>';
@@ -3243,6 +3323,7 @@
     state.boltOns = freshBoltOns();
     state.txPhase = freshTxPhase();
     state.presetLength = null; state.presetVariant = null; state.dueDate = null; state.pregExams = {};
+    state.revise = { on: false, rows: [], orig: [], saved: null }; $('reviseDate').value = ''; $('incFindings').checked = true;
     $('patientName').value = ''; $('startDate').value = '';
     $('insurancePlanName').value = '';
     $('hasInsurance').checked = false; $('deductibleRemaining').value = 0;
@@ -3257,7 +3338,7 @@
     ['secName', 'secCap', 'secCoins', 'secCopay', 'secFeeAdj', 'secFeeReExam', 'secFeeXray', 'snName', 'snPct', 'snDed', 'snCap', 'snCoins', 'snCopay', 'snFeeAdj', 'snFeeReExam', 'snFeeXray'].forEach(function(id) { $(id).value = ''; });
     $('snMode').value = ''; $('snCoversDed').value = ''; $('secRenewMonth').value = ''; $('secRenewDay').value = 1; $('secRenewReset').checked = true; $('secRenewSame').checked = true; syncSecUI();
     $('feeAdjAllowed').value = 0; $('feeReExamAllowed').value = 0; $('feeXrayAllowedPerArea').value = 0;
-    renderPresetTree(); renderPhases(); renderXrayPlan(); renderSkipWeeks(); renderTxPhase(); renderBoltOns(); renderSavings(); recalc();
+    renderPresetTree(); renderPhases(); renderXrayPlan(); renderSkipWeeks(); renderTxPhase(); renderBoltOns(); renderSavings(); renderReviseUI(); recalc();
   });
 
   function printWarnings() {
@@ -3279,6 +3360,125 @@
     window.print();
   }
   $('printBtn').addEventListener('click', doPrint);
+
+  // ---- revised plans (a patient changes frequency partway through care) ----
+  function origMonthCounts() {
+    var wasOn = state.revise.on; state.revise.on = false;
+    var b = buildVisits(); state.revise.on = wasOn;
+    // what the original plan expected, week by week (so a part-month can be prefilled too)
+    var total = Math.max(0, b.totalWeeks - 1), weeks = [];
+    for (var i = 0; i < total; i++) weeks.push({ adj: 0, reexam: 0, xray: 0 });
+    b.visits.forEach(function(v) {
+      if (v.isReport || !weeks[v.week - 1]) return;
+      var w = weeks[v.week - 1];
+      w.adj++; if (v.isReExam) w.reexam++; if (v.isXray) w.xray += (v.xrayAreas || 0);
+    });
+    return { weeksData: weeks, weeks: total };
+  }
+  // Split the completed weeks into 4-week months (the last one may be a part-month),
+  // keeping any edits already made to rows whose size didn't change.
+  function buildReviseRows(W, keep) {
+    var rows = [], base = 0, i = 0, wd = state.revise.origWeeks || [];
+    while (base < W) {
+      var n = Math.min(4, W - base), old = keep && keep[i];
+      if (old && old.weeks === n) rows.push(old);
+      else {
+        var row = { weeks: n, adj: 0, reexam: 0, xray: 0 };
+        for (var k = base; k < base + n; k++) if (wd[k]) { row.adj += wd[k].adj; row.reexam += wd[k].reexam; row.xray += wd[k].xray; }
+        rows.push(row);
+      }
+      base += n; i++;
+    }
+    return rows;
+  }
+  function renderReviseRows() {
+    var r = state.revise, box = $('reviseRows');
+    if (!r.on) { box.innerHTML = ''; return; }
+    var h = '<table style="margin-top:8px;"><thead><tr><th>Period</th><th>Adjustments</th><th>Re-exams</th><th>X-ray areas</th></tr></thead><tbody>';
+    var skipL = parseSkipWeeks(), startS = $('startDate').value, baseW = 0;
+    r.rows.forEach(function(row, i) {
+      var dates = saneDate(startS) ? calendarRangeForWeeks(baseW + 1, baseW + row.weeks, startS, skipL) : '';
+      baseW += row.weeks;
+      h += '<tr><td>Month ' + (i + 1) + (dates ? ' (' + dates + ')' : '') + (row.weeks < 4 ? ' — part month, ' + row.weeks + ' week' + (row.weeks === 1 ? '' : 's') : '') + '</td>' +
+        ['adj', 'reexam', 'xray'].map(function(f) {
+          return '<td><input type="number" min="0" step="1" style="margin-bottom:0;" value="' + (row[f] || 0) + '" data-rr="' + i + '" data-rf="' + f + '"></td>';
+        }).join('') + '</tr>';
+    });
+    box.innerHTML = h + '</tbody></table>';
+    box.querySelectorAll('input[data-rr]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        state.revise.rows[+inp.getAttribute('data-rr')][inp.getAttribute('data-rf')] = Math.max(0, parseInt(inp.value, 10) || 0);
+        recalc();
+      });
+    });
+  }
+  function renderReviseUI() {
+    var on = state.revise.on;
+    $('reviseOn').checked = on;
+    $('reviseBody').style.display = on ? '' : 'none';
+    $('cardPreset').style.display = on ? 'none' : '';
+    if (on) {
+      var w = state.revise.weeks, f = Math.floor(w / 4);
+      $('reviseWeeksNote').textContent = w + ' week' + (w === 1 ? '' : 's') + ' completed before the revision date' +
+        (f ? ' (' + f + ' full month' + (f === 1 ? '' : 's') + (w % 4 ? ' + a part month' : '') + ')' : ' (part of the first month)') + '.';
+    } else $('reviseWeeksNote').textContent = '';
+    renderReviseRows();
+  }
+  // plan weeks that start before the revision date = weeks completed
+  function weeksBeforeDate(dateStr) {
+    var startS = $('startDate').value;
+    if (!saneDate(dateStr) || !saneDate(startS)) return null;
+    var skipL = parseSkipWeeks(), gs = gridStartFor(startS), rev = new Date(dateStr + 'T00:00:00'), w = 0, total = state.revise.origTotal || 0;
+    while (w < total) {
+      var d = addDays(gs, 7 * (calendarWeekIndex(w + 1, skipL) - 1));
+      if (d < rev) w++; else break;
+    }
+    return w;
+  }
+  function setReviseK(w) {
+    var r = state.revise;
+    w = Math.max(1, Math.min(r.origTotal || 1, w || 1));
+    r.weeks = w;
+    r.rows = buildReviseRows(w, r.rows);
+    renderReviseUI(); recalc();
+  }
+  function enableRevise() {
+    if (state.presetLength === PREGNANCY_KEY) { alert('Revising is not available for pregnancy plans.'); $('reviseOn').checked = false; return; }
+    var r = state.revise, snap = origMonthCounts();
+    if (!snap.weeks) { alert('Build the original plan first.'); $('reviseOn').checked = false; return; }
+    if (!saneDate($('startDate').value)) { alert('Enter the plan start date first (the original start date).'); $('reviseOn').checked = false; return; }
+    r.origWeeks = snap.weeksData; r.origTotal = snap.weeks;
+    r.saved = { phases: JSON.parse(JSON.stringify(state.phases)), presetLength: state.presetLength, presetVariant: state.presetVariant,
+      xrayPlan: JSON.parse(JSON.stringify(state.xrayPlan)), incFindings: $('incFindings').checked };
+    var k = Math.min(4, r.origTotal);
+    r.weeks = k;
+    r.rows = buildReviseRows(k, null);
+    // starter phase for the NEW schedule: the remaining weeks of the original plan at 2x/week (edit below)
+    state.phases = [tier(2, Math.max(4, snap.weeks - k))];
+    state.presetLength = CUSTOM_KEY; state.presetVariant = null;
+    state.xrayPlan = { triggers: [], atFinal: true, finalAreas: (r.saved.xrayPlan && r.saved.xrayPlan.finalAreas) || 2 };
+    $('incFindings').checked = false;
+    r.on = true;
+    // start with the date of plan week k+1 (4 weeks in); change it to the real revision date
+    var d0 = addDays(gridStartFor($('startDate').value), 7 * (calendarWeekIndex(k + 1, parseSkipWeeks()) - 1));
+    $('reviseDate').value = toISODate(d0);
+    renderReviseUI(); renderPresetTree(); renderPhases(); renderXrayPlan(); recalc();
+  }
+  function disableRevise() {
+    var r = state.revise;
+    if (r.saved) {
+      state.phases = r.saved.phases; state.presetLength = r.saved.presetLength; state.presetVariant = r.saved.presetVariant;
+      state.xrayPlan = r.saved.xrayPlan; $('incFindings').checked = r.saved.incFindings;
+    }
+    r.on = false; r.rows = []; r.orig = []; r.saved = null;
+    renderReviseUI(); renderPresetTree(); renderPhases(); renderXrayPlan(); recalc();
+  }
+  $('reviseOn').addEventListener('change', function() { if (this.checked) enableRevise(); else disableRevise(); });
+  $('reviseDate').addEventListener('change', function() {
+    var w = weeksBeforeDate(this.value);
+    if (w === null) return;
+    setReviseK(w);
+  });
 
   // ---- UI simplification: tabs, collapsibles, info toggles, sticky bar (no data is stored in the browser) ----
   document.querySelectorAll('.tabs').forEach(function(bar) {
