@@ -2053,7 +2053,7 @@
       var counts = {};
       BOLT_ON_CATALOG.forEach(function(c) { counts[c.key] = 0; });
       return { monthIdx: monthIdx, weekStart: weekStart, weekEnd: weekEnd,
-        counts: counts, subtotal: 0, insuranceSavings: 0, selfPayCash: 0,
+        counts: counts, actualCounts: {}, subtotal: 0, insuranceSavings: 0, selfPayCash: 0,
         insOwed: 0, kindCash: {},
         insuranceVisits: 0, selfPayVisits: 0 };
     }
@@ -2326,6 +2326,7 @@
           }
           applyLine(bm, cashFull, owed, bucket, b.key);
           bm.counts[b.key]++;
+          if (v.isActual) bm.actualCounts[b.key] = (bm.actualCounts[b.key] || 0) + 1;
           if (bucket === 'insurance') visitHadInsuranceLine = true;
         });
         if (visitHadInsuranceLine) bm.insuranceVisits++; else bm.selfPayVisits++;
@@ -2766,6 +2767,11 @@
       var tag = v.isFreeEvent ? ' (post-baby exam + x-ray at Dr. Burke\'s expense)' : (v.isAnniversary ? ' (anniversary exam)' : (v.isXray ? ' (+ x-ray)' : ''));
       return '#' + v.visitNum + tag;
     }).join(', ');
+    var examFromLbl = 'counted from the first visit of this plan';
+    if (revW) {
+      var rdv = $('reviseDate').value;
+      examFromLbl = 'counted from the revision date' + (saneDate(rdv) ? ' of ' + fmtShortDate(new Date(rdv + 'T00:00:00')) : '');
+    }
     var freqRows = (revW ? '<div>Weeks 1&ndash;' + revW + ': actual visits used &mdash; ' + revActualAdj + ' adjustments</div>' : '') + state.phases.map(function(p, pi) {
       var label = freqLabelOf(p);
       var span = p.totalVisits ? 'part of a week' : (p.weeks + ' weeks');
@@ -2953,7 +2959,7 @@
       html += '<div class="pv-footnote" style="font-style:normal;"><b>Revised plan:</b> weeks 1&ndash;' + revW + ' show the visits actually used; the rest is planned at the new frequency.</div>';
     }
     if (examVisitText) {
-      html += '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits (counted from the first visit of this plan):</b> ' + escapeHtml(examVisitText) + '</div>';
+      html += '<div class="pv-footnote" style="font-style:normal;"><b>Exams planned on visits (' + examFromLbl + '):</b> ' + escapeHtml(examVisitText) + '</div>';
     }
 
     var skipNotes = skippedWeekNotes(startDateStr);
@@ -3057,12 +3063,19 @@
       html += '</div>';
 
       var boltRows = plan.boltMonths.map(function(bm) {
-        var services = [];
+        var services = [], actSv = [], plnSv = [];
         BOLT_ON_CATALOG.forEach(function(c) {
           if (bm.counts[c.key]) services.push(bm.counts[c.key] + ' ' + c.label);
+          var a = (bm.actualCounts && bm.actualCounts[c.key]) || 0, pl = (bm.counts[c.key] || 0) - a;
+          if (a) actSv.push(a + ' ' + c.label);
+          if (pl) plnSv.push(pl + ' ' + c.label);
         });
+        var svHtml = escapeHtml(services.join(', '));
+        if (revW && actSv.length && plnSv.length) svHtml = 'Actual: ' + escapeHtml(actSv.join(', ')) + '<br>Planned: ' + escapeHtml(plnSv.join(', '));
+        else if (revW && actSv.length) svHtml = 'Actual: ' + escapeHtml(actSv.join(', '));
+        else if (revW && plnSv.length && bm.monthIdx <= Math.ceil(revW / 4)) svHtml = 'Planned: ' + escapeHtml(plnSv.join(', '));
         return {
-          monthIdx: bm.monthIdx,
+          monthIdx: bm.monthIdx, svHtml: svHtml,
           dateRange: calendarRangeForWeeks(bm.weekStart, bm.weekEnd, startDateStr, skipList),
           services: services, fullCost: bm.subtotal, insContribution: bm.insuranceSavings, savings: bm.selfPaySavings, total: bm.total
         };
@@ -3073,7 +3086,7 @@
 
       html += '<table class="pv-table"><thead><tr>' + (isPregPrint ? '' : '<th class="pv-num-col">#</th>') + '<th class="pv-dur-col">Duration</th><th>Additional Services</th><th class="num pv-money-col">Estimated Cost</th><th class="num pv-money-col">Ins / Other Savings</th><th class="num pv-money-col">Savings</th><th class="num pv-money-col">Estimated Total</th></tr></thead><tbody>';
       boltRows.forEach(function(r) {
-        html += '<tr>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + escapeHtml(r.services.join(', ')) + '</td>' +
+        html += '<tr>' + (isPregPrint ? '' : '<td class="pv-num-col">' + r.monthIdx + '</td>') + '<td class="pv-dur-col">' + r.dateRange + '</td><td>' + r.svHtml + '</td>' +
           '<td class="num pv-money-col">' + money(r.fullCost) + '</td><td class="num pv-money-col">' + (r.insContribution > 0 ? '−' + money(r.insContribution) : money(0)) + '</td>' +
           '<td class="num pv-money-col">' + (r.savings > 0 ? '−' + money(r.savings) : money(0)) + '</td>' +
           '<td class="num pv-money-col">' + money(r.total) + '</td></tr>';
@@ -3331,7 +3344,7 @@
       html += '<table class="pv-table pv-sheet-table' + (isPregPrint ? ' pv-sheet-nomo' : '') + (plan.hasSecondary ? ' pv-sheet-sec' : '') + '"><thead><tr><th class="ctr">Mo</th><th>Dates</th><th>Descriptions</th><th class="num">Actual Fees</th><th>Addl Services</th><th class="num">Addl Fees</th><th class="num">Total Fees</th><th class="num">Savings Amt</th><th class="num">Patient Owes</th><th class="num">Co-pay Chiro</th><th class="num">Co-pay Addl</th><th class="num">Self-pay Chiro</th><th class="num">Self-pay Addl</th><th class="num">Ins Contrib</th>' + (plan.hasSecondary ? '<th class="num">Sec Contrib</th>' : '') + '</tr></thead><tbody>' + sheetRows +
         '</tbody><tfoot><tr><td colspan="' + (isPregPrint ? 2 : 3) + '">Totals</td><td class="num">' + money(T.actual) + '</td><td></td><td class="num">' + money(T.boltFee) + '</td><td class="num">' + money(T.total) + '</td><td class="num">' + money(T.sav) + '</td><td class="num">' + money(T.owe) + '</td><td class="num">' + money(T.cpC) + '</td><td class="num">' + money(T.cpB) + '</td><td class="num">' + money(T.spC) + '</td><td class="num">' + money(T.spB) + '</td><td class="num">' + money(T.ins) + '</td>' + (plan.hasSecondary ? '<td class="num">' + money(T.sec) + '</td>' : '') + '</tr></tfoot></table>';
       html += '<div class="pv-footnote" style="font-style:normal;font-size:11px;">' + sheetNotes.map(escapeHtml).join(' ') + '</div>' +
-        (examVisitText ? '<div class="pv-footnote" style="font-style:normal;font-size:11px;"><b>Exams planned on visits:</b> ' + escapeHtml(examVisitText) + '</div>' : '');
+        (examVisitText ? '<div class="pv-footnote" style="font-style:normal;font-size:11px;"><b>Exams planned on visits' + (revW ? ' (' + examFromLbl + ')' : '') + ':</b> ' + escapeHtml(examVisitText) + '</div>' : '');
       html += '</div>'; // .pv-page
     }
 
